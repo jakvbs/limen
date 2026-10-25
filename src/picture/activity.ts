@@ -410,8 +410,8 @@ async function sessionFile(dir: string): Promise<string | undefined> {
 }
 
 /**
- * Both engines write a `model_change` entry near the start of the session file once the first message lands:
- * OMP as `model: "provider/id"`, Pi as `provider` and `modelId`.
+ * Pi writes a `model_change` entry with `provider` and `modelId` near the start of the session file once the first
+ * message lands.
  */
 async function sessionModel(id: string, session: string | undefined, models: Map<string, string>): Promise<string> {
 	const known = models.get(id);
@@ -424,9 +424,11 @@ async function sessionModel(id: string, session: string | undefined, models: Map
 			continue;
 		}
 		try {
-			const entry = JSON.parse(line) as { type?: unknown; model?: unknown; provider?: unknown; modelId?: unknown };
-			const pi = typeof entry.modelId === "string" && typeof entry.provider === "string";
-			const model = typeof entry.model === "string" ? entry.model : pi ? `${entry.provider}/${entry.modelId}` : "";
+			const entry = JSON.parse(line) as { type?: unknown; provider?: unknown; modelId?: unknown };
+			const model =
+				typeof entry.modelId === "string" && typeof entry.provider === "string"
+					? `${entry.provider}/${entry.modelId}`
+					: "";
 			if (entry.type === "model_change" && model) {
 				models.set(id, model);
 				return model;

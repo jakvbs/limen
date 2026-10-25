@@ -32,7 +32,7 @@ export function hostedBoot(): string | undefined {
 		return;
 	}
 }
-/** Only hosted Pi on Linux can bind its pane; OMP and other platforms have no ownership proof to lose. */
+/** Only hosted Pi on Linux can bind its pane; other engines and platforms have no ownership proof to lose. */
 export function hostedBindingSupported(engine: string): boolean {
 	return engine === "pi" && hostedBoot() !== undefined;
 }

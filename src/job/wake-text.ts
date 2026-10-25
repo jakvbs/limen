@@ -48,7 +48,8 @@ export function jobEnding(job: string): string {
 }
 /**
  * How a completion wake travels. `fallback`: a busy coordinator's wake reaches another session. `instruction`: a route's
- * own landing words (the Herdr prompt to an OMP coordinator). `session`: the Pi session that receives the wake.
+ * own landing words (the Herdr prompt to a coordinator without a Pi session). `session`: the Pi session that receives
+ * the wake.
  */
 type CompletionRoute = { readonly fallback?: boolean; readonly instruction?: string; readonly session?: string };
 export function completionWake(
@@ -92,7 +93,7 @@ export function completionWake(
 		const land = open.length
 			? "Then decide each open check, and land the work at the verified commit only after that."
 			: "Then land the work at the verified commit.";
-		// A route's own wording (the Herdr prompt to an OMP coordinator) replaces only the landing instruction.
+		// A route's own wording (the Herdr prompt to a pane without a Pi session) replaces only the landing instruction.
 		instruction =
 			routeInstruction ??
 			`Inspect the job record, branch diff and commits, log/session, and relevant checks. ${land} If a check blocks landing, name that check and resume a focused fix. ${keeperHint(job, id)} After it lands, continue with the next item on the board. Keep the user informed; ask only when genuine product ambiguity, a scope or risk tradeoff, or an irreversible action needs a human decision.`;

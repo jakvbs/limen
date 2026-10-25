@@ -141,7 +141,7 @@ for (const hosted of [false, true]) {
 	});
 }
 
-test("invalid group selections never activate or consume jobs, including later teams and OMP", async (context) => {
+test("invalid group selections never activate or consume jobs, including later teams", async (context) => {
 	const f = await fixture();
 	context.after(f.cleanup);
 	const trees = git(f.root, "worktree", "list", "--porcelain");
@@ -156,9 +156,6 @@ test("invalid group selections never activate or consume jobs, including later t
 		const result = f.start("--extension", f.common, ...extra);
 		assert.equal(result.status, 1, result.stderr);
 	}
-	const ompSettings = settings.map((arg) => arg.replace(/^pi:/, "omp:"));
-	const omp = f.run(["group", "start", f.feature, ...ompSettings, f.mode, "--team-extension", `team-2=${f.common}`]);
-	assert.match(omp.stderr, /supported only for Pi/);
 	assert.deepEqual(await readdir(join(f.root, ".limen/groups")).catch(() => []), []);
 	assert.deepEqual(await readdir(join(f.root, ".limen/jobs")).catch(() => []), []);
 	assert.equal(git(f.root, "worktree", "list", "--porcelain"), trees);

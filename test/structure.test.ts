@@ -12,7 +12,7 @@ async function filesBelow(dir: string): Promise<string[]> {
 	const entries = await readdir(dir, { withFileTypes: true });
 	const paths = await Promise.all(
 		entries
-			.filter((entry) => !["node_modules", ".git", ".omp", ".pi"].includes(entry.name))
+			.filter((entry) => !["node_modules", ".git", ".pi"].includes(entry.name))
 			.map(async (entry) => {
 				const path = join(dir, entry.name);
 				return entry.isDirectory() ? filesBelow(path) : [path];

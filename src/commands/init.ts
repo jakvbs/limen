@@ -41,8 +41,6 @@ export async function initCommand(args: readonly string[], cwd: string): Promise
 		".agents/control",
 		".pi/extensions/control-wake.ts",
 		".pi/extensions/control-communication.ts",
-		".omp/extensions/control-wake.ts",
-		".omp/extensions/control-communication.ts",
 	]) {
 		if (await pathExists(`${root}/${legacy}`)) {
 			throw new Error(`legacy ${legacy} exists; leftover Control path — rename or remove it by hand`);
@@ -77,7 +75,6 @@ async function initialize(root: string, repository: boolean): Promise<void> {
 			(lane) => [`${ROOT}/templates/spec/features/${lane}/.gitkeep`, `${root}/spec/features/${lane}/.gitkeep`] as const,
 		),
 		[`${ROOT}/templates/limen-extension.ts`, `${root}/.pi/extensions/limen.ts`],
-		[`${ROOT}/templates/limen-extension.ts`, `${root}/.omp/extensions/limen.ts`],
 	] as const;
 	for (const [source, target] of copies) {
 		await mkdir(dirname(target), { recursive: true });

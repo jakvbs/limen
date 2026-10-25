@@ -23,8 +23,8 @@ test("guidance reminders name the unread lines for the edited area, once until r
 		call("tool_result", { toolName, input, isError, content: [] }, { cwd })?.content.at(-1)?.text ?? "";
 	assert.match(tool("edit", { path: "core/a.rs" }), /styleguide\.md lines 1-6, 11-13\. .*`core\/`, Rust/);
 	assert.equal(tool("edit", { path: "core/b.rs" }), "", "same area, already asked");
-	assert.match(tool("edit", { paths: ["web/x.ts", "README.md"] }), /lines 1-2, 7-10\. .* web\/x\.ts,/);
-	tool("read", { path: ".agents/limen/styleguide.md:1-10" });
+	assert.match(tool("edit", { path: "web/x.ts" }), /lines 1-2, 7-10\. .* web\/x\.ts,/);
+	tool("read", { path: ".agents/limen/styleguide.md", offset: 1, limit: 10 });
 	tool("read", { path: ".agents/limen/styleguide.md", offset: 11, limit: 3 });
 	assert.equal(tool("edit", { path: "io/c.rs" }), "", "every line that applies was read");
 	call("session_compact");

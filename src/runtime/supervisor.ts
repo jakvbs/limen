@@ -28,7 +28,7 @@ import {
 } from "../job/record.ts";
 import { noteKind } from "../job/view.ts";
 import { worktreeState } from "../project/git.ts";
-import { argvFor, type EngineId, type EngineProfile, jobProfile, prepareSkillConfig } from "./engine.ts";
+import { argvFor, type EngineId, type EngineProfile, jobProfile } from "./engine.ts";
 import {
 	hostedBindingInPane,
 	hostedBindingSupported,
@@ -353,8 +353,6 @@ async function hostedEngineLaunch(jobDir: string): Promise<{ profile: EngineProf
 	const taskFile = requiredEnvironment("LIMEN_TASK_FILE");
 	const continueFile = process.env.LIMEN_CONTINUE_FILE?.trim();
 	const profile = await jobProfile(jobDir);
-	const worktree = requiredEnvironment("LIMEN_WORKTREE");
-	const skillConfig = profile.id === "omp" ? await prepareSkillConfig(worktree, jobDir) : undefined;
 	const membership = await jobMembership(jobDir);
 	if (
 		membership &&
@@ -366,7 +364,6 @@ async function hostedEngineLaunch(jobDir: string): Promise<{ profile: EngineProf
 	const args = argvFor(profile, {
 		jsonMode: false,
 		jobDir,
-		...(skillConfig ? { skillConfig } : {}),
 		label: requiredEnvironment("LIMEN_LABEL"),
 		preamble: requiredEnvironment("LIMEN_PREAMBLE"),
 		extensions: [

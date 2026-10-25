@@ -9,7 +9,7 @@ import { git, jobDir, jobFile, limen, plant, release, repository, spawnJob, star
 
 const p = await plant();
 after(p.cleanup);
-const ROUTE = ["--engine", "omp", "--provider", "p", "--model", "m", "--thinking", "high"];
+const ROUTE = ["--engine", "pi", "--provider", "p", "--model", "m", "--thinking", "high"];
 const ARCHIVE =
 	"path\tnumber\ttitle\tclose_month\nspec/features/done/2026-09/F012-c\tF012\tc\t2026-09\nhigh-water\tF012\n";
 const lane = (name: string) =>

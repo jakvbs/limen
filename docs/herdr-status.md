@@ -120,7 +120,7 @@ While it is on, these start with `◆ `:
 
 A Limen state label takes the place of Herdr's state word, so the marked label
 keeps that word in front: `idle ◆ 2 RUNNING · 1 watched · …`. The state icon,
-the state word where Limen reports no label, the agent kind (`pi`, `omp`), the
+the state word where Limen reports no label, the agent kind (`pi`), the
 terminal title that Pi sets, tab numbers, workspace names you typed, and Pi's
 own footer stay native. Two Limen strings stay unmarked: role space labels
 (`repo workers · /path`), because Limen finds its role spaces by label, and agent

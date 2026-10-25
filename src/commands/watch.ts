@@ -4,7 +4,10 @@ import { atomicWrite } from "../job/record.ts";
 import { limenRoot } from "../project/git.ts";
 import { currentNotificationSession, herdrWakePane } from "./spawn.ts";
 
-/** How a job's wake reaches this coordinator: a Pi session subscribes in-process; a Herdr coordinator without one (OMP) is the job's `origin-pane`. */
+/**
+ * How a job's wake reaches this coordinator: a Pi session subscribes in-process; a Herdr coordinator without one is
+ * the job's `origin-pane`.
+ */
 export type WakeRoute = { readonly session: string } | { readonly pane: string };
 
 export const watchCommand = (args: readonly string[], cwd: string): Promise<void> =>

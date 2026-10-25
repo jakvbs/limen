@@ -22,8 +22,6 @@ const STOPPERS = new Set([
 	...["function", "{", "}", "exit", "return", "exec", "logout", "eval", "source", ".", "builtin", "trap", "set"],
 	...["shopt", "hash", "enable", "alias", "mapfile", "readarray"],
 ]);
-// OMP runs one shell for the whole session, so these change what every later call runs: a function, an option, a trap.
-const KEPT = new Set(["function", "eval", "source", ".", "trap", "set", "shopt", "hash", "enable", "alias"]);
 // One chain: simple commands joined by `&&` or a pipe. Any other separator starts a list, a subshell or a substitution.
 const CHAINED = new Set(["", "&&", "|", "|&"]);
 const PIPES = new Set(["|", "|&"]);
@@ -40,24 +38,20 @@ export type Run = { readonly words: string; readonly why: string };
 export type Gap = { readonly command: string; readonly why: string };
 
 /**
- * Every simple command of the job's bash calls, Pi and OMP alike. One counts when its call ended with exit 0, the call
+ * Every simple command of the job's bash calls. One counts when its call ended with exit 0, the call
  * is one chain of commands joined by `&&` or a pipe, and no pipe follows it: a pipe's exit status is its last command's.
  */
 export function sessionRuns(jobDir: string): Run[] {
-	const omp = readOptional(join(jobDir, "engine"))?.trim() === "omp";
-	return transcripts(jobDir).flatMap((lines) => {
-		let kept = "";
-		return bashCalls(lines).flatMap(({ command, ok }) => {
+	return transcripts(jobDir).flatMap((lines) =>
+		bashCalls(lines).flatMap(({ command, ok }) => {
 			const parts = pieces(command);
-			const held = kept && `an earlier call in OMP's persistent shell holds \`${kept}\``;
-			const why = (ok ? "" : "its shell call did not end with exit 0") || held || chainWhy(command, parts);
-			kept ||= omp ? keptWord(command, parts) : "";
+			const why = (ok ? "" : "its shell call did not end with exit 0") || chainWhy(command, parts);
 			return parts.map(({ words }, index) => ({
 				words: words.replace(PREFIX, ""),
 				why: why || (PIPES.has(parts[index + 1]?.sep ?? "") ? "a `|` follows it and hides its exit status" : ""),
 			}));
-		});
-	});
+		}),
+	);
 }
 
 /** Undefined when each simple command of `named` starts one that surely ran: `npm test -- --grep x` runs `npm test`. */
@@ -141,14 +135,6 @@ function chainWhy(command: string, parts: readonly Piece[]): string {
 		}
 	}
 	return "";
-}
-
-/** What an OMP call leaves in its persistent shell for later calls: a function definition `()` or a word of `KEPT`. */
-function keptWord(command: string, parts: readonly Piece[]): string {
-	if (/\w\s*\(\s*\)/.test(command)) {
-		return "()";
-	}
-	return parts.map(({ words }) => firstWord(words)).find((word) => KEPT.has(word)) ?? "";
 }
 
 const firstWord = (words: string): string => words.replace(PREFIX, "").split(" ")[0] ?? "";

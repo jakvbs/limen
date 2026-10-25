@@ -1,6 +1,6 @@
-// U3: what a coordinator is told. One ended turn tells the shepherd: a blocker always counts; any other end waits for
-// the coordinator's own running jobs; an aborted turn means the owner is at the pane and never counts. A completion
-// wake sends only a done job that is not a scout to landing; a done scout has nothing to land (F936).
+// U3: what a coordinator is told. One ended turn tells the shepherd only when no running job it owns will wake the
+// coordinator again; an aborted turn means the owner is at the pane and never counts. A completion wake sends only a
+// done job that is not a scout to landing; a done scout has nothing to land (F936).
 import assert from "node:assert/strict";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -11,29 +11,13 @@ import { promptPane } from "../src/integrations/coordinator-wake.ts";
 import { completionWake } from "../src/job/wake-text.ts";
 import { FINAL } from "./plant.ts";
 
-const todo = (content: string, status: string) => ({ content, status });
-const goal = (status: string) => ({ id: "g", objective: "Ship F781", status });
-const base: CoordinatorTurn = { todos: [], todosClosed: false, stop: "stop", ownedRunning: 0, said: "Report sent" };
-const open = [todo("Review", "pending"), todo("Land F781", "in_progress")];
-const closed = [todo("Spawn", "completed"), todo("Report", "abandoned"), todo("Land F781", "completed")];
-const blocked = [todo("Review", "pending"), { content: "Land F781", status: "blocked", blocker: "needs owner" }];
+const base: CoordinatorTurn = { stop: "stop", ownedRunning: 0, said: "Report sent" };
 
-const rows: ReadonlyArray<readonly [string, Partial<CoordinatorTurn>, string | undefined]> = [
-	["open todos while an owned job runs", { todos: open, ownedRunning: 1 }, undefined],
-	["a blocked todo while owned jobs run", { todos: blocked, ownedRunning: 2 }, "coordinator.blocked"],
-	["a goal out of budget while a job runs", { goal: goal("budget-limited"), ownedRunning: 1 }, "coordinator.blocked"],
-	["every todo closed this turn", { todos: closed, todosClosed: true }, "coordinator.goal-done"],
-	["closed todos, an active goal", { todos: closed, todosClosed: true, goal: goal("active") }, "coordinator.idle"],
-	["todos closed in an earlier turn", { todos: closed }, "coordinator.idle"],
-	["an aborted turn with a blocked todo", { stop: "aborted", todos: blocked }, undefined],
-];
-
-test("an ended turn signals what its todos, goal, stop and owned jobs call for, naming the blocker or next todo", () => {
-	for (const [name, turn, kind] of rows) {
-		assert.equal(turnSignal({ ...base, ...turn })?.kind, kind, name);
-	}
-	assert.match(turnSignal({ ...base, todos: blocked })?.reason ?? "", /\(needs owner\); last message: Report sent$/);
-	assert.match(turnSignal({ ...base, todos: open })?.reason ?? "", /next: Land F781; last message: Report sent$/);
+test("an ended turn signals idle with its last message unless an owned job runs or the owner aborted it", () => {
+	assert.equal(turnSignal({ ...base, ownedRunning: 1 }), undefined);
+	assert.equal(turnSignal({ ...base, stop: "aborted" }), undefined);
+	assert.deepEqual(turnSignal(base), { kind: "coordinator.idle", reason: "turn ended; last message: Report sent" });
+	assert.equal(turnSignal({ ...base, stop: "error", said: "" })?.reason, "last turn failed");
 });
 
 test("only a done job that is not a scout is sent to landing; a fallback or scout wake has the whole message, a Herdr wake past one request is not sent", async (t) => {

@@ -15,12 +15,12 @@ Units next to this file: `bell.sh`, `limen-bell.{service,timer}`, `limen-prune.{
 ## On the box
 
 1. `tailscale up`. Confirm you can `ssh you@that-name` from the Mac.
-2. Node 24, Git, `gh`, and the engine on `PATH`: `pi`, or `omp` with `export LIMEN_ENGINE=omp` in the worker's `~/.bashrc`, because new jobs run Pi when no engine is named. Install Herdr the same way you did on the Mac.
+2. Node 24, Git, `gh`, and `pi` on `PATH`. Install Herdr the same way you did on the Mac.
 3. Clone limen, `npm install && npm link`. Clone **one** project. `limen init` there. This is the only project copy that runs jobs.
 4. Model provider, `gh auth login`, and deploy tokens stay on the seat. The **GitHub App key** for the optional PR doorbell is different: it belongs only to the separate `limen-github` Unix user, never to the worker/coordinator account.
 5. Disable automatic reboot under live jobs (`Unattended-Upgrade::Automatic-Reboot "false";`). Patch when you choose.
 6. Start a persistent Herdr session (or `herdr server` under systemd) so attach works with the lid closed.
-7. `herdr integration install pi` (or `omp`) for hosted tabs. First smoke job: `limen spawn --detached`.
+7. `herdr integration install pi` for hosted tabs. First smoke job: `limen spawn --detached`.
 
 ## Bell
 

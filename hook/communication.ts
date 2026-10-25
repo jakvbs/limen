@@ -378,14 +378,10 @@ function jobTicket(cwd: string): string {
 	return ticketPointers(task)[0]?.path ?? "";
 }
 
-/** OMP names the files of a multi-file edit in `paths`; Pi and a one-file OMP edit name the file in `path`. */
 function guidanceAsks(event: ToolEvent, job: boolean): readonly Ask[] {
 	const name = event.toolName ?? "";
 	if (name === "write" || name === "edit") {
-		const listed = event.input?.paths;
-		const paths = Array.isArray(listed)
-			? listed.filter((path): path is string => typeof path === "string")
-			: [toolPath(event)];
+		const paths = [toolPath(event)];
 		const asks: Ask[] = [
 			{ kind: "specs", paths: paths.filter(isSpecPath) },
 			{ kind: "style", paths: paths.filter((path) => !isSpecPath(path) && isCodePath(path)) },
@@ -445,10 +441,10 @@ function isVisionCommand(command: string, job: boolean): boolean {
 function noteRead(recall: Recall, event: ToolEvent): void {
 	const name = event.toolName ?? "";
 	if (name === "read") {
-		const [, file = "", selector = ""] = /^(.*?\.md)(?::(.*))?$/i.exec(posixPath(toolPath(event))) ?? [];
-		const kind = REMINDER_KINDS.find((candidate) => GUIDANCE[candidate].pattern.test(file));
+		const file = posixPath(toolPath(event));
+		const kind = /\.md$/i.test(file) && REMINDER_KINDS.find((candidate) => GUIDANCE[candidate].pattern.test(file));
 		if (kind) {
-			recall.read.set(kind, [...(recall.read.get(kind) ?? []), ...readRanges(selector, event)]);
+			recall.read.set(kind, [...(recall.read.get(kind) ?? []), readRange(event)]);
 		}
 		return;
 	}
@@ -464,43 +460,22 @@ function noteRead(recall: Recall, event: ToolEvent): void {
 }
 
 /**
- * A truncated read says `[Showing lines 1-300 of 429`. Otherwise Pi takes offset and limit, and OMP puts `:50-100`,
- * `:50+20`, `:50` or `:5,9` after the path; a read without either shows the whole file.
+ * A truncated read says `[Showing lines 1-300 of 429`. Otherwise Pi takes offset and limit; a read without either
+ * shows the whole file.
  */
-function readRanges(selector: string, event: ToolEvent): LineRange[] {
+function readRange(event: ToolEvent): LineRange {
 	const text = (event.content ?? []).map((part) => part.text ?? "").join("\n");
 	const shown = /\[Showing lines (\d+)-(\d+) of \d+/.exec(text);
 	if (shown) {
-		return [[Number(shown[1]), Number(shown[2])]];
+		return [Number(shown[1]), Number(shown[2])];
 	}
 	const offset = event.input?.offset;
 	const limit = event.input?.limit;
 	if (typeof offset === "number" || typeof limit === "number") {
 		const start = typeof offset === "number" ? Math.max(1, offset) : 1;
-		return [[start, typeof limit === "number" ? start + limit - 1 : Number.POSITIVE_INFINITY]];
+		return [start, typeof limit === "number" ? start + limit - 1 : Number.POSITIVE_INFINITY];
 	}
-	const parts = selector.split(":").find((part) => /^[\d,+-]+$/.test(part));
-	if (!parts) {
-		return [[1, Number.POSITIVE_INFINITY]];
-	}
-	const list = parts.split(",");
-	return list.map((part) => lineRange(part, list.length > 1));
-}
-
-/** `:-60` counts back from the end of a file this hook does not measure, so it covers nothing. */
-function lineRange(part: string, list: boolean): LineRange {
-	const [, from = "", sign = "", to = ""] = /^(\d*)([-+]?)(\d*)$/.exec(part) ?? [];
-	const start = Number(from);
-	if (!start) {
-		return [0, 0];
-	}
-	if (sign === "+" && to) {
-		return [start, start + Number(to) - 1];
-	}
-	if (sign === "-" && to) {
-		return [start, Number(to)];
-	}
-	return [start, list && !sign ? start : Number.POSITIVE_INFINITY];
+	return [1, Number.POSITIVE_INFINITY];
 }
 
 /** Names the guidance lines that apply and are still unread, once until compaction; quiet when nothing new applies. */

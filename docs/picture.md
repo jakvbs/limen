@@ -60,7 +60,7 @@ The same `◆` and the same accent mark Limen's text in Herdr: see [See what Lim
 
 The page then shows a live strip with each job, the feature it names, and what it does now: thinking, editing files, reading code, running tests and checks, running a command, running helpers, or waiting. Each line names the engine and model and the time since the last event. The places a running job's feature touches carry a mark, and the feature's detail lists its jobs.
 
-- **Same for both engines:** OMP and Pi jobs, detached and hosted, write the same job files (`activity`, `last-tool`, `tool-calls`, `log`). The model comes from the `model_change` entry of the job's session file.
+- **Same for both launch modes:** detached and hosted jobs write the same job files (`activity`, `last-tool`, `tool-calls`, `log`). The model comes from the `model_change` entry of the job's session file.
 - **Feature link:** a job belongs to each F number in its label or job id. A job that names no feature on the page appears only in the strip.
 - **Never a false running:** a job whose record says running but whose owner process is gone reads **not responding**. A job with no event for five minutes reads **quiet**, with its last action.
 - **Finished jobs:** done, failed, and stopped jobs stay for one hour after they end.

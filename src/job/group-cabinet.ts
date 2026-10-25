@@ -203,7 +203,7 @@ export async function groupIdentity(cwd: string, explicitId?: string): Promise<G
 	}
 	return { run, recipient: `lead-${run.lead}` };
 }
-// OMP does not export its session to tool commands, so a registered lead is also recognized as a live ancestor process.
+// A lead whose tool commands carry no Pi session is also recognized as a registered live ancestor process.
 export async function leadSession(root: string): Promise<string | undefined> {
 	const declared = process.env.PI_SESSION_ID?.trim();
 	if (declared) {

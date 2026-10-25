@@ -72,13 +72,10 @@ type PiApi = {
 			| "session_start"
 			| "session_shutdown"
 			| "agent_settled"
-			| "agent_end"
 			| "message_start"
 			| "message_end"
 			| "tool_execution_start"
-			| "tool_execution_end"
-			| "tool_result"
-			| "goal_updated",
+			| "tool_execution_end",
 		handler: (event: unknown, context: Context) => void,
 	): void;
 	sendUserMessage(content: string, options?: { readonly deliverAs: "steer" | "followUp" }): Promise<void> | void;
@@ -1008,13 +1005,6 @@ export default function limenWake(pi: PiApi): void {
 		finishedCache = undefined;
 		sweep();
 	});
-	// omp ends a run with agent_end and never emits agent_settled; willContinue marks a run that goes on. Pi's agent_end
-	// carries no willContinue, and its agent_settled follows. The coordinator counts the first end of each turn.
-	pi.on("agent_end", (event) => {
-		if (event && typeof event === "object" && "willContinue" in event && event.willContinue !== true) {
-			coordinator.settled();
-		}
-	});
 	pi.on("session_shutdown", () => {
 		coordinator.shutdown();
 		if (!active && !sweepTimer) {
@@ -1036,8 +1026,6 @@ export default function limenWake(pi: PiApi): void {
 	});
 	pi.on("tool_execution_start", (event) => coordinator.toolStart(event));
 	pi.on("tool_execution_end", (event) => coordinator.toolEnd(event));
-	pi.on("tool_result", (event) => coordinator.toolResult(event));
-	pi.on("goal_updated", (event) => coordinator.goalUpdated(event));
 	if (process.env.LIMEN_JOB === "1") {
 		return;
 	}

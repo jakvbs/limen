@@ -56,7 +56,7 @@ test("a job's note shows once, keeps its first version, logs changes, and is che
 	process.env.LIMEN_HOSTED = "1";
 	await Promise.all([rm(join(job, "note.md")), rm(reminders)]);
 	const hosted = load(limenFinish);
-	assert.equal(hosted.handlers.has("agent_before_settle") || hosted.handlers.has("session_stop"), false);
+	assert.equal(hosted.handlers.has("agent_before_settle"), false);
 	const rebuild = (await hosted.end("early")) ?? "";
 	assert.ok(rebuild.startsWith(`[limen] No note exists in ${job}/note.md. Read ${job}/task.md and reconstruct`));
 	assert.match(rebuild, /^\[limen\] No note .*\nCompare .*\nGive .*\nDo not repeat .*\nThen call finish again\. .*$/);

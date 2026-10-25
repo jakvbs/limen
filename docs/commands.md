@@ -18,7 +18,7 @@ Start a worker, a reviewer, or a job in one child repository, or continue a fini
 limen spawn --engine <engine> --provider <provider> --model <model> --thinking <level> "instruction" [--label L] [--branch B] [--role NAME] [--timeout 20m] [--task-file F|-] [--prepare CMD] [--priority 1|2|3] [--tab|--detached] [--extension PATH ...]
 limen spawn --engine <engine> --provider <provider> --model <model> --thinking <level> --repo R "instruction" [--label L]
 limen spawn --engine <engine> --provider <provider> --model <model> --thinking <level> --review --detached --branch B --label L [--base REF] [--head REF] "instruction"
-limen continue <id|suffix|label> "follow-up instruction" [--review] [--label L] [--engine pi|omp] [--provider P] [--model M] [--thinking T] [--tab|--detached] [--timeout D] [--priority 1|2|3] [--extension PATH ...]
+limen continue <id|suffix|label> "follow-up instruction" [--review] [--label L] [--engine pi] [--provider P] [--model M] [--thinking T] [--tab|--detached] [--timeout D] [--priority 1|2|3] [--extension PATH ...]
 limen spawn --engine devin [--provider macos|linux] [--model MODE] "instruction" [--label L] [--branch B] [--timeout 20m] [--task-file F|-]
 ```
 
@@ -26,7 +26,7 @@ limen spawn --engine devin [--provider macos|linux] [--model MODE] "instruction"
 
 `--base` and `--head` pin the range that a review reads. They take a full SHA, a short SHA, or a ref such as a branch or tag; Limen resolves it with `git rev-parse` and records the full SHA. They require `--review`.
 
-**Pi extensions.** Repeat `--extension PATH` to select existing local extension files or package directories. Relative paths use the caller's directory, not the worker worktree; quoted `~/` paths expand from the caller's home. Quote paths with spaces. Limen resolves symlinks and removes duplicate paths in first-seen order. Empty values, remote sources (`npm:`, `git:`, URLs), built-in selectors and globs are rejected before preflight or job/worktree creation. OMP rejects this option; its existing launch behavior is unchanged.
+**Pi extensions.** Repeat `--extension PATH` to select existing local extension files or package directories. Relative paths use the caller's directory, not the worker worktree; quoted `~/` paths expand from the caller's home. Quote paths with spaces. Limen resolves symlinks and removes duplicate paths in first-seen order. Empty values, remote sources (`npm:`, `git:`, URLs), built-in selectors and globs are rejected before preflight or job/worktree creation. A Devin job rejects this option.
 
 Both hosted and detached Pi jobs retain `--no-extensions` and all required Limen hooks. Herdr state reporting remains hosted-only. The selected list is published with the job in `extensions.json`; startup checks that its targets still exist. A missing legacy record means no extras. A malformed record or unavailable target is an error.
 

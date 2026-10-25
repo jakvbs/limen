@@ -32,7 +32,7 @@ WORKER_KEY=       # a third laptop private key, for WORKER, e.g. ~/.ssh/shop-sea
 PROJECT_REPO=     # OWNER/REPO on github.com
 PROJECT_BRANCH=   # an existing work branch, not only the default branch
 LIMEN_REV=        # 40-hex Limen commit on main that contains this file; the human picks it
-MODEL_FLAGS=      # --provider P --model M --thinking T (omp flags; omp has no --engine)
+MODEL_FLAGS=      # --provider P --model M --thinking T (pi flags)
 BELL=moshi        # moshi, or ntfy if the phone does not use Moshi
 # The agent writes these during the run.
 SEAT_HOST=        # phase 2: the full MagicDNS name
@@ -106,7 +106,7 @@ PEM_SOURCE=/root/limen-app.pem       # root-only file; never in a worker home
 ## 4 · Tools and logins
 
 - root$ one root-owned Limen release, for the worker now and the poller later. Never `npm link` a worker clone. `git clone $LIMEN_REPO /opt/limen && git -C /opt/limen checkout --detach $LIMEN_REV && chown -R root:root /opt/limen && chmod -R go-w /opt/limen && ln -sfnT /opt/limen/bin/limen /usr/local/bin/limen`
-- root$ stage and install root-owned Node 24.21.0 and Herdr 0.9.3. The `case` picks the file and checksum for this CPU. Each checksum is checked before the file runs. Do not install omp as root.
+- root$ stage and install root-owned Node 24.21.0 and Herdr 0.9.3. The `case` picks the file and checksum for this CPU. Each checksum is checked before the file runs. Do not install pi as root.
 ```sh
 case $(uname -m) in
   x86_64)  node_arch=x64 herdr_arch=x86_64
@@ -130,25 +130,24 @@ install -o root -g root -m 0755 /root/install/node /usr/local/bin/node
 install -o root -g root -m 0755 /root/install/herdr /usr/local/bin/herdr
 ```
 - Checksum sources: Node [SHASUMS256.txt](https://nodejs.org/dist/v24.21.0/SHASUMS256.txt); Herdr, the `sha256:` digest of each asset on the [Herdr v0.9.3](https://github.com/herdrdev/herdr/releases/tag/v0.9.3) release page. **STOP** if a `sha256sum -c` line does not end in `OK`.
-- worker$ install worker-owned omp 18.6.1 into `~/.local/bin` (no sudo). Checksum before it runs. Never install a root-owned `/usr/local/bin/omp`.
+- worker$ install worker-owned pi 1.4.0 into `~/.local/share/pi`, linked from `~/.local/bin/pi` (no sudo). Checksum before it runs. Never install a root-owned `/usr/local/bin/pi`.
 ```sh
 case $(uname -m) in
-  x86_64)  omp_arch=x64   omp_sha=c92a6846d02984e84f07c6362d18add3783f528f494ffcf1e0f26e594f327463 ;;
-  aarch64) omp_arch=arm64 omp_sha=cb7815330bb117877e4e133562ea82e3001ee470e47393552507b5a7f0407f4a ;;
+  x86_64)  pi_arch=x64   pi_sha=f2e4e4329603223d03260cdb8bd5033dbdc1f73ba58ab8939db2e56546e115d2 ;;
+  aarch64) pi_arch=arm64 pi_sha=fa5829c7ef83ffeaebba015715c8306220f89b2aa8a00154efbba98dd5440156 ;;
   *) echo "unsupported CPU $(uname -m)" >&2; exit 1 ;;
 esac
-mkdir -p ~/.local/bin
-curl -fsSL https://github.com/can1357/oh-my-pi/releases/download/v18.6.1/omp-linux-$omp_arch -o ~/.local/bin/omp.new
-echo "$omp_sha  $HOME/.local/bin/omp.new" | sha256sum -c -
-chmod 0755 ~/.local/bin/omp.new && mv ~/.local/bin/omp.new ~/.local/bin/omp
+mkdir -p ~/.local/bin ~/.local/share
+curl -fsSL https://github.com/earendil-works/pi/releases/download/v1.4.0/pi-linux-$pi_arch.tar.gz -o ~/.local/share/pi.tar.gz
+echo "$pi_sha  $HOME/.local/share/pi.tar.gz" | sha256sum -c -
+rm -rf ~/.local/share/pi && tar -xzf ~/.local/share/pi.tar.gz -C ~/.local/share && rm ~/.local/share/pi.tar.gz
+ln -sfn ../share/pi/pi ~/.local/bin/pi
 grep -qF '.local/bin' ~/.bashrc 2>/dev/null || printf '\n[ -d "$HOME/.local/bin" ] && PATH="$HOME/.local/bin:$PATH"\n' >> ~/.bashrc
-# This seat runs OMP only; without an engine named, Limen starts new jobs on Pi.
-grep -qF 'LIMEN_ENGINE' ~/.bashrc 2>/dev/null || printf '\nexport LIMEN_ENGINE=omp\n' >> ~/.bashrc
 ```
-- Checksum source: omp [SHA256SUMS.txt](https://github.com/can1357/oh-my-pi/releases/download/v18.6.1/SHA256SUMS.txt) (same digests as the [v18.6.1](https://github.com/can1357/oh-my-pi/releases/tag/v18.6.1) asset list). **STOP** if a `sha256sum -c` line does not end in `OK`.
-- **HUMAN · laptop** (not from another server): `ssh -t $SEAT_HOST`. In that seat shell, run `gh auth login --hostname github.com --git-protocol https --web`, then `gh auth setup-git`, then `omp` and log in to the model provider.
+- Checksum source: pi [SHA256SUMS](https://github.com/earendil-works/pi/releases/download/v1.4.0/SHA256SUMS) (same digests as the [v1.4.0](https://github.com/earendil-works/pi/releases/tag/v1.4.0) asset list). **STOP** if a `sha256sum -c` line does not end in `OK`.
+- **HUMAN · laptop** (not from another server): `ssh -t $SEAT_HOST`. In that seat shell, run `gh auth login --hostname github.com --git-protocol https --web`, then `gh auth setup-git`, then `pi` and log in to the model provider.
 - **Why HTTPS:** Git over SSH on the seat needs a seat key. A key with a passphrase blocks every batch `git` call, and a key without one is a new secret on the seat. HTTPS with the `gh` credential helper needs neither.
-- **Check:** worker$ `node -v` is `v24.21.0`; `command -v limen` is `/usr/local/bin/limen`; `git -C /opt/limen -c safe.directory=/opt/limen rev-parse HEAD` is `LIMEN_REV`; `test -f /opt/limen/docs/seat/agent-setup.md` exits 0; `herdr --version` is `herdr 0.9.3`; `command -v omp` is `$HOME/.local/bin/omp`; `omp --version` is `omp/18.6.1`; `test ! -e /usr/local/bin/omp` exits 0; `gh auth status` exits 0; `gh config get git_protocol -h github.com` is `https`. **STOP** on any mismatch.
+- **Check:** worker$ `node -v` is `v24.21.0`; `command -v limen` is `/usr/local/bin/limen`; `git -C /opt/limen -c safe.directory=/opt/limen rev-parse HEAD` is `LIMEN_REV`; `test -f /opt/limen/docs/seat/agent-setup.md` exits 0; `herdr --version` is `herdr 0.9.3`; `command -v pi` is `$HOME/.local/bin/pi`; `pi --version` is `1.4.0`; `test ! -e /usr/local/bin/pi` exits 0; `gh auth status` exits 0; `gh config get git_protocol -h github.com` is `https`. **STOP** on any mismatch.
 
 ## 5 · Project and `limen init`
 
@@ -158,7 +157,7 @@ grep -qF 'LIMEN_ENGINE' ~/.bashrc 2>/dev/null || printf '\nexport LIMEN_ENGINE=o
 - If the clone asks for a passphrase or fails with `Permission denied (publickey)`, Git uses SSH. Run worker$ `gh config set git_protocol https -h github.com && rm -rf $PROJECT_DIR`, then clone again. Do not add a seat SSH key for this.
 - **Check:** worker$ `git -C $PROJECT_DIR remote get-url origin` starts with `https://github.com/`; `git -C $PROJECT_DIR branch --show-current` is `PROJECT_BRANCH`; `cat ~/.limen/projects` prints `PROJECT_DIR` and no other line (on a seat with older projects: only roots that the HUMAN names); `test -d $PROJECT_DIR/.limen/jobs` exits 0. **STOP** if not.
 - Fix, only with HUMAN approval, for a junk line such as `/home/$WORKER/.nvm`: worker$ `grep -vFx /home/$WORKER/.nvm ~/.limen/projects > ~/.limen/projects.new; cat ~/.limen/projects.new > ~/.limen/projects; rm ~/.limen/projects.new` (`cat >` keeps the file and the poller's read ACL). If the doorbell already runs on this seat, run the first phase 14 Check (`cd $PROJECT_DIR && limen github doctor && limen github status`) again after this. `limen init` in a new project replaces the list file and drops that ACL (`src/project/seat.ts:15-20`); with the doorbell, run the phase 12 block again after it.
-- worker$ `cd $PROJECT_DIR && git status --short`. Show it to the HUMAN: `limen init` adds `spec/`, `.agents/limen/`, `.omp/extensions/limen.ts`, `.pi/extensions/limen.ts`, and a `.gitignore` line. The HUMAN decides whether to commit them. Do not push. Jobs branch from the last commit.
+- worker$ `cd $PROJECT_DIR && git status --short`. Show it to the HUMAN: `limen init` adds `spec/`, `.agents/limen/`, `.pi/extensions/limen.ts`, and a `.gitignore` line. The HUMAN decides whether to commit them. Do not push. Jobs branch from the last commit.
 
 Each checkout where `limen init` runs is its own plant, with its own `.limen/` job files. A plant can live on the Mac, on the seat, or on both. Never copy `.limen/` between machines. A job is visible only on the machine that started it. Only a seat plant gets GitHub doorbell wakes.
 
@@ -178,7 +177,7 @@ echo "$moshi_sha  /root/install/moshi.tgz" | sha256sum -c -
 tar -xzf /root/install/moshi.tgz -C /usr/local/bin moshi-hook
 chown root:root /usr/local/bin/moshi-hook && chmod 0755 /usr/local/bin/moshi-hook
 ```
-- worker$ `moshi-hook install --target omp && moshi-hook service install`
+- worker$ `moshi-hook install --target pi && moshi-hook service install`
 - **HUMAN · phone:** in Moshi, open Settings → **Hooks** (Agent Hooks), not Integrations, and copy the pairing token.
 - **HUMAN · laptop:** pair on the seat, not in the Mac Keychain. The command asks for the token and does not echo it: `ssh -t $SEAT_HOST 'read -rsp "Moshi token: " token; echo; moshi-hook pair --store file --name $SEAT_NAME --token "$token"'`
 - **Check:** worker$ `moshi-hook status` says paired and the daemon runs. **STOP** on `unpaired`. This proves the pairing only.
@@ -186,10 +185,10 @@ chown root:root /usr/local/bin/moshi-hook && chmod 0755 /usr/local/bin/moshi-hoo
 
 ## 7 · Herdr coordinator
 
-- worker$ `herdr integration install omp`. **STOP** if it exits non-zero.
-- **HUMAN · laptop:** `herdr --remote $WORKER@$SEAT_HOST`. Open a tab, `cd $PROJECT_DIR`, then pane$ `export LIMEN_COORDINATOR=1 && omp $MODEL_FLAGS`. Ask the coordinator to run `echo $HERDR_ENV $LIMEN_COORDINATOR $HERDR_PANE_ID`.
+- worker$ `herdr integration install pi`. **STOP** if it exits non-zero.
+- **HUMAN · laptop:** `herdr --remote $WORKER@$SEAT_HOST`. Open a tab, `cd $PROJECT_DIR`, then pane$ `export LIMEN_COORDINATOR=1 && pi $MODEL_FLAGS`. Ask the coordinator to run `echo $HERDR_ENV $LIMEN_COORDINATOR $HERDR_PANE_ID`.
 - **Check:** the human reports `1 1` and a pane id. The human detaches and attaches again: the same tab is there. **STOP** if not.
-- Live coordinator rule (used by the doorbell in phases 12–14): Herdr reports the pane with `agent_status` idle, working, blocked, or done. With OMP, Herdr can leave out `interactive_ready`. Limen counts the field as live when it is `true` or absent; only `interactive_ready: false` is not live.
+- Live coordinator rule (used by the doorbell in phases 12–14): Herdr reports the pane with `agent_status` idle, working, blocked, or done. Herdr can leave out `interactive_ready`. Limen counts the field as live when it is `true` or absent; only `interactive_ready: false` is not live.
 
 ## 8 · Prune timer
 
@@ -212,9 +211,9 @@ systemctl daemon-reload && systemctl enable --now limen-prune.timer && systemctl
 
 ## 10 · Lid-closed proof and lock-down
 
-- **HUMAN:** pane$ ask the coordinator to run `limen spawn --detached --engine omp $MODEL_FLAGS --label seat-smoke "Print seat-smoke and finish. Change no files."`. Then close the laptop lid for five minutes.
+- **HUMAN:** pane$ ask the coordinator to run `limen spawn --detached --engine pi $MODEL_FLAGS --label seat-smoke "Print seat-smoke and finish. Change no files."`. Then close the laptop lid for five minutes.
 - **Check:** worker$ `cd $PROJECT_DIR && limen jobs seat-smoke` starts with `DONE` (`produced nothing` is fine here). mac$ `herdr --remote $WORKER@$SEAT_HOST` shows the same coordinator tab. **STOP** if not.
-- Prove later, not a gate: the Moshi phone ring. Ask the human if the phone rang, and write the answer in your report. A silent phone does not stop setup. Jobs start with `--no-extensions` (`src/runtime/engine.ts:136`), so only the coordinator's turn after the completion wake can ring Moshi.
+- Prove later, not a gate: the Moshi phone ring. Ask the human if the phone rang, and write the answer in your report. A silent phone does not stop setup. Jobs start with `--no-extensions` (`src/runtime/engine.ts:109`), so only the coordinator's turn after the completion wake can ring Moshi.
 - **Check (lock-down end state):** mac$ `ssh $ADMIN_SSH 'echo ${SSH_CONNECTION%% *}'` prints a `100.` or `fd7a:115c:a1e0:` address; `ssh -o HostName=$PUBLIC_IP $ADMIN_SSH true` and `ssh -o IdentitiesOnly=yes -i $WORKER_KEY $WORKER@$PUBLIC_IP true` both exit 255 with `Permission denied (publickey)`; `ssh $BREAK_GLASS_SSH true` exits 0, so break-glass still works. **STOP** if any differs.
 
 The seat is ready after this phase. **HUMAN:** decide whether this project uses the opt-in GitHub doorbell (phases 11–14): a PR or issue comment with `@limen` or `/limen` from a writer wakes the coordinator. If not, setup ends here.
@@ -244,7 +243,7 @@ WORKER=$WORKER APP_ID=$APP_ID PEM_SOURCE=$PEM_SOURCE LIMEN_REPO=$LIMEN_REPO LIME
 - The installer added `WORKER` to the `limen-github` group. A process that started before that keeps its old groups. This includes the Herdr server and the user manager that linger keeps alive.
 - worker$ `herdr server stop`. This closes every pane.
 - **Check:** worker$ `id -nG` (a new SSH login) lists `limen-github`. **STOP** if not: the installer did not add the group.
-- **HUMAN · laptop:** `herdr --remote $WORKER@$SEAT_HOST`, open a tab, `cd $PROJECT_DIR`, pane$ `export LIMEN_COORDINATOR=1 && omp $MODEL_FLAGS`. Ask the coordinator to run `id -nG`.
+- **HUMAN · laptop:** `herdr --remote $WORKER@$SEAT_HOST`, open a tab, `cd $PROJECT_DIR`, pane$ `export LIMEN_COORDINATOR=1 && pi $MODEL_FLAGS`. Ask the coordinator to run `id -nG`.
 - If the pane's `id -nG` does not list `limen-github`, the Herdr server started from the old user manager. root$ `systemctl restart user@$(id -u $WORKER).service` (this also restarts the worker's user services, such as `moshi-hook`). Then the HUMAN attaches again and starts the coordinator again, as in the last step.
 - **HUMAN:** pane$ ask the coordinator to run `id -nG`, then `limen github connect`.
 - **Check:** `id -nG` lists `limen-github`; connect prints a line that starts `connected $PROJECT_REPO → Herdr`. **STOP** if not.

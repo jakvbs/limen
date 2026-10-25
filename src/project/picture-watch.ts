@@ -9,7 +9,7 @@ const MARK = "# limen picture watch ";
 // The tick must not inherit the routing or job identity of whoever moved the branch: no Git
 // repository override, no coordinator wake route, no job context. Binary and home overrides stay.
 const SCRUB = "^((GIT|HERDR|LIMEN|PI_SESSION)_[A-Za-z0-9_]*)=";
-const KEEP = "LIMEN_(HOME|HERDR|OMP|PI|HUNK)";
+const KEEP = "LIMEN_(HOME|HERDR|PI|HUNK)";
 
 type Watch = { readonly branch: string; readonly dir: string; readonly log: string; readonly flags: readonly string[] };
 

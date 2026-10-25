@@ -44,7 +44,6 @@ before(async () => {
 		"spec/build.md": `# Build\n\n## NOW\n\n- ${BOARD}\n`,
 		// Copies an old `limen init` planted next to the stub; vanilla Pi loads every .ts in these folders.
 		".pi/extensions/limen-communication.ts": `export { default } from ${JSON.stringify(join(PACKAGE, "hook/communication.ts"))};\n`,
-		".omp/extensions/limen-steering.ts": `export { default } from ${JSON.stringify(join(PACKAGE, "hook/steering.ts"))};\n`,
 	};
 	for (const [path, text] of Object.entries(files)) {
 		writeFileSync(join(p.root, path), text);
@@ -92,7 +91,6 @@ test("a second init removes old hook copies, so a coordinator gets each guidance
 	assert.deepEqual(seen, [1, 1, 1, 1, 1], "styleguide, register, vision, board, capability frame");
 	assert.equal(count(readFileSync(join(coord, "fake-context.txt"), "utf8"), RULE), 1, "a seat rule rides the turn");
 	assert.deepEqual(readdirSync(join(p.root, ".pi/extensions")), ["limen.ts"]);
-	assert.deepEqual(readdirSync(join(p.root, ".omp/extensions")), ["limen.ts"]);
 });
 
 test("a running worker gets each steer once and in order; an ended one refuses a late steer and writes nothing", async () => {

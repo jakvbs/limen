@@ -813,7 +813,7 @@ export function currentNotificationSession(): string | undefined {
 	return value || undefined;
 }
 /**
- * OMP does not export its session to tool commands, so a Herdr coordinator without a Pi session is woken on its pane.
+ * A Herdr coordinator whose tool commands carry no Pi session is woken on its pane.
  * `limen watch` and `steer --running` use the same route through `origin-pane`.
  */
 export function herdrWakePane(notificationSession: string | undefined): string | undefined {

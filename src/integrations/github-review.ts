@@ -50,7 +50,7 @@ export async function readBinding(root: string): Promise<GithubBinding | undefin
 
 export type HerdrAgentRow = { pane_id?: string; agent_status?: string; interactive_ready?: boolean };
 
-// Herdr skips screen detection for some engines (OMP) and then omits interactive_ready; only an explicit false means not ready.
+// Herdr skips screen detection for some agents and omits interactive_ready; only an explicit false means not ready.
 export function liveCoordinator(agent: HerdrAgentRow | undefined, pane: string): boolean {
 	return (
 		agent?.pane_id === pane &&

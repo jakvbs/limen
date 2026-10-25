@@ -28,8 +28,8 @@ import {
 const PEER = fileURLToPath(new URL("../hook/group-peer.ts", import.meta.url));
 const FEATURE = dirname(TICKET);
 const LEAD = { PI_SESSION_ID: "s8-lead" };
-const ROUTE = ["--engine", "omp", "--provider", "fake", "--model", "fake-1", "--thinking", "high", "--detached"];
-const TEAM = "omp:fake/fake-1:high";
+const ROUTE = ["--engine", "pi", "--provider", "fake", "--model", "fake-1", "--thinking", "high", "--detached"];
+const TEAM = "pi:fake/fake-1:high";
 const SETTINGS = ["--team", TEAM, "--team", TEAM, "--workers", "1", "--timeout", "30m", "--detached"];
 const ROUNDS = join(dirname(FEATURE), "F002-rounds");
 let p: Plant;
@@ -213,7 +213,7 @@ test("each recipient reads a finding once, the lead hears it as a followUp, and 
 });
 
 test("a second group runs two routes through draft, critique and final, and the lead hears its result once", async () => {
-	const teams = ["--team", TEAM, "--team", "omp:fake/fake-2:low", "--rounds", "draft,critique,final"];
+	const teams = ["--team", TEAM, "--team", "pi:fake/fake-2:low", "--rounds", "draft,critique,final"];
 	const started = await run(["group", "start", ROUNDS, ...teams], LEAD);
 	assert.equal(started.status, 0, started.output);
 	const finished = `Group ${ROUNDS} (${started.id}) finished`;

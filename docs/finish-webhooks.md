@@ -292,8 +292,7 @@ after a failed or absent automatic send, never as a routine duplicate.
 Every plant ping is queued on disk before any send. This covers a job finish
 (`job.done`, `job.failed`, `job.stopped`, `job.timed-out`, `job.stalled`), the
 `job.stalled` advisory while a job runs, `coordinator.idle`,
-`coordinator.blocked`, `coordinator.goal-done`, `coordinator.exited`, and
-`lead.step-done`. The queue entry is `finish-webhook-queue` (JSON) in the ping's
+`coordinator.exited`, and `lead.step-done`. The queue entry is `finish-webhook-queue` (JSON) in the ping's
 receipt folder. An index file `.limen/outbox/<event-id>` names that folder.
 
 Finalization does not wait for HTTP. It queues the ping in milliseconds and
@@ -355,10 +354,8 @@ URL/AUTH pair needs no change. One event sends one ping.
 | `job.stalled` | `failed` | a detached job's tool stalls and the job ends | `stalled tool …` |
 | `job.stalled` | `stalled` | a hosted job's supervisor writes an idle, blocked, or errored advisory while the session stays open | the advisory line |
 | `job.stopped` | `stopped` | a job is stopped | the stop reason |
-| `coordinator.idle` | `idle` | a coordinator turn ends, is not blocked, aborted or goal-done, and no running job it owns will wake it | `turn ended`, `last turn failed`, or `turn ended with 2 open todos; next: Land F781`, then `; last message: <first line>` |
-| `coordinator.blocked` | `blocked` | a turn ends with a blocked todo or a goal out of token budget, or an `ask` waits 60 seconds | the blocker, then the last message; or the question |
-| `coordinator.goal-done` | `goal-done` | an omp goal becomes complete, or a turn closes every todo while no owned job runs | the goal objective; or the last done todo, then the last message |
-| `coordinator.exited` | `exited` | the sweep finds a registered coordinator process gone without omp's `normal` exit | pid, exit kind, and the tool it was running |
+| `coordinator.idle` | `idle` | a coordinator turn ends, is not aborted, and no running job it owns will wake it | `turn ended` or `last turn failed`, then `; last message: <first line>` |
+| `coordinator.exited` | `exited` | the sweep finds a registered coordinator process gone without the hook's shutdown mark | pid and the tool it was running |
 | `lead.step-done` | `waiting` | a lead group step (see above) | the step |
 | `webhook.test` | `test` | `limen webhook test` | host and time |
 
@@ -387,10 +384,8 @@ message names a feature. `handoff` names the next step for each kind. A
 that closes clean and idle sends only `job.done`. A supervisor that restarts on
 a standing advisory of the same kind does not ping again.
 
-A coordinator turn ends at omp's `agent_end` without `willContinue`, or at Pi's
-`agent_settled`. Each turn sends at most one ping: a second end without a new
-assistant message sends nothing, and a goal that completes in a turn replaces
-that turn's ping. The last message is the first text line of the turn's last
+A coordinator turn ends at Pi's `agent_settled`. Each turn sends at most one
+ping: a second end without a new assistant message sends nothing. The last message is the first text line of the turn's last
 assistant message, without Markdown markers, up to 200 characters.
 
 Coordinator events come from the wake hook, which every plant loader already
@@ -410,7 +405,7 @@ crashed)`. The reason ends with the tool in flight, for example
 - Coordinator events start after the plant's coordinator reloads its hooks, so the
   wake hook registers it. A running coordinator keeps the hook it loaded at
   start. Reload when the coordinator is idle: quit it and resume its session in
-  the same pane (`omp --resume <session-id>` or `pi --session <session-id>`);
+  the same pane (`pi --session <session-id>`);
   do not kill a working agent.
 - Exit detection needs `limen sweep --install` on the machine. Check with
   `launchctl list | grep limen-sweep`.
@@ -738,15 +733,13 @@ how Limen selects a file, sends, and records the result.
 - **Coordinator registration:** the record that lets Limen send coordinator
   events. The wake hook registers the session under
   `.limen/coordinators/<session-id>/` with its pid, process start time, pane,
-  session file, title, and the tool it is running. Coordinator pings and their
+  title, and the tool it is running. Coordinator pings and their
   receipts live in `.limen/coordinator-events/<session-id>/<event>.<claim>/`,
   outside the registration, so a queued ping survives the coordinator's exit or
   resume. Job stall receipts stay in the job's `events/` folder.
 - **Exit detection:** how the sweep notices a dead coordinator. Process exit
   needs no code in the dead process. Each `limen sweep` pass (the installed
   LaunchAgent runs it every 60 seconds) checks every registration. When the
-  recorded pid is gone or now belongs to another process, the sweep reads the
-  newest omp `session_exit` record written after the registration started. A
-  `normal` exit, or a Pi shutdown mark without a record, removes the
-  registration silently. Any other exit queues one `coordinator.exited`, then
-  removes the registration.
+  recorded pid is gone or now belongs to another process, a Pi shutdown mark
+  removes the registration silently. Any other exit queues one
+  `coordinator.exited`, then removes the registration.

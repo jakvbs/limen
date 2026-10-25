@@ -151,7 +151,7 @@ test("S10: only an authorized request rings the doorbell, the App replies once e
 
 	// The coordinator starts a hosted task for the PR request; the fake agent answers one status check and leaves.
 	const coordinator = { ...env, HERDR_ENV: "1", LIMEN_COORDINATOR: "1", HERDR_PANE_ID: "coord:p1" };
-	const model = ["--engine", "omp", "--provider", "p", "--model", "m", "--thinking", "high"];
+	const model = ["--engine", "pi", "--provider", "p", "--model", "m", "--thinking", "high"];
 	const work = limen(p, ["github", "work", p.root, "104", ...model, "--task", "Fix it"], { env: coordinator });
 	assert.equal(work.status, 0, work.stderr);
 	const id = work.stdout.trim().split("\n").at(-1) as string;

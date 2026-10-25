@@ -10,7 +10,7 @@ This is operator guidance, not a provisioner. Limen does not install Tailscale o
 
 | Layer | Role | What it is not |
 |---|---|---|
-| **Seat** | Runs the engine (`pi`, or `omp`), `limen`, and Herdr; owns the project copy, worktrees, and job files | A second clone you `limen spawn` from |
+| **Seat** | Runs the engine (`pi`), `limen`, and Herdr; owns the project copy, worktrees, and job files | A second clone you `limen spawn` from |
 | **Doorbell** | An opt-in GitHub App poller, isolated under its own Unix user, routes one exact PR or issue comment, or a new issue body, to the project's persistent Herdr coordinator | A runner, a merge gate, or CI |
 
 The App identity is seat-scoped; each project opts in with `limen github connect`. No inbound port or laptop consumer. Never install the private key in a checkout or in an account that runs hosted workers.
@@ -22,7 +22,7 @@ Coordinator and workers must agree on the same `repoRoot` and `.limen/jobs/`.
 ```
 Mac (window)                         VPS (seat)
 ────────────                         ──────────
-Tailscale                            Tailscale + limen + pi/omp + Herdr
+Tailscale                            Tailscale + limen + pi + Herdr
 herdr --remote / session attach  ──► same session, same job cabinet
 browser: tailscale serve URL         app, tests, workers
 optional local git clone             never a second .limen/
@@ -53,7 +53,7 @@ Do not: SSHFS the worktrees; run a coordinator on the laptop against a different
 
 Buy the box, then follow the [seat checklist](seat/README.md). Short version:
 
-1. Ubuntu LTS, 8 GB RAM, ≥150 GB disk, Tailscale, SSH key only. Node 24, Git, `gh`, `pi` (or `omp` with `LIMEN_ENGINE=omp`), Herdr, `limen` linked from a clone of this repo.
+1. Ubuntu LTS, 8 GB RAM, ≥150 GB disk, Tailscale, SSH key only. Node 24, Git, `gh`, `pi`, Herdr, `limen` linked from a clone of this repo.
 2. Clone the work **branch** (not only `origin/HEAD`). `limen init` in that checkout. Keys stay on the seat. This checkout is the only project copy that runs jobs.
 3. Bell: Moshi (`moshi-hook pair --store file`, `service install`, `loginctl enable-linger`). ntfy is fallback — [seat/](seat/README.md).
 4. Persistent Herdr session on the box. Attach with `herdr --remote`. For the GitHub doorbell, the registered coordinator must stay available in that session; ordinary seat jobs may still run detached.
@@ -74,13 +74,13 @@ These are operational facts that keep a seat alive. They are not Limen features.
 
 ## Linux process identity
 
-Linux reads process identity from `/proc/<pid>/stat` start ticks; macOS reads `proc_pidinfo` birth timestamps. `limen stop` and detached process containment use the same code on both. A restricted or unreadable process table leaves an advisory rather than proof of an owned child. Hosted tabs remain Herdr-owned. Hosted observation does not stop quiet tools, even with verified ownership; explicit stops and configured group deadlines still apply. Linux Pi attribution uses an exclusive job/session and PID/birth/boot binding rather than mutable launch arguments. Unavailable engine or child observations remain visible and produce bounded, idle-only uncertainty wakes after one minute. OMP and Darwin attribution remain fail-closed; their adapter proof is not established.
+Linux reads process identity from `/proc/<pid>/stat` start ticks; macOS reads `proc_pidinfo` birth timestamps. `limen stop` and detached process containment use the same code on both. A restricted or unreadable process table leaves an advisory rather than proof of an owned child. Hosted tabs remain Herdr-owned. Hosted observation does not stop quiet tools, even with verified ownership; explicit stops and configured group deadlines still apply. Linux Pi attribution uses an exclusive job/session and PID/birth/boot binding rather than mutable launch arguments. Unavailable engine or child observations remain visible and produce bounded, idle-only uncertainty wakes after one minute. Darwin attribution remains fail-closed; its adapter proof is not established.
 
 ## Traps (will bite on day one)
 
 - **Wake is not the bell.** Footer, toast, and `sendUserMessage` fire in the coordinator session *on the seat*. You are not looking at it. Moshi (`pair --store file` + linger) is the attention channel; ntfy is fallback. `host setup` is SSH/Mosh onto the box, not the hook. Do not wait for a Limen-owned notifier (`LIMEN_NOTIFY` does not exist).
 - **Hosted on a seat remains an explicit choice.** Inside Herdr, `limen spawn` is hosted (`HERDR_ENV=1`). Ordinary unattended jobs may use `--detached`; the GitHub PR doorbell is different: it never falls back to detached when Herdr is unavailable.
-- **`--tab` must start while the new tab is focused.** Herdr will not launch an agent in a background pane (`not an available shell`, or a start that never lands). Limen focuses the new tab, starts the engine, then restores the coordinator. First smoke on a seat is still `--detached`. Hosted OMP tabs need `herdr integration install omp`.
+- **`--tab` must start while the new tab is focused.** Herdr will not launch an agent in a background pane (`not an available shell`, or a start that never lands). Limen focuses the new tab, starts the engine, then restores the coordinator. First smoke on a seat is still `--detached`. Hosted tabs need `herdr integration install pi`.
 - **Herdr `done` is unseen idle**, not process exit. On a seat you attach twice a day, so almost every tab reads `done`. Limen must not treat that as terminal, and it does not. A quiet think in a background tab is the same lie — no idle-after-tools timer. Complete on explicit `finish` or a vanished process. Pi's reload shutdown is not completion. Do not “fix” `idle` vs `done` for headless.
 - **A laptop clone is not a Limen root.** Attach; do not `limen spawn` from it. That is a second cabinet.
 - **Checkout the work branch.** `origin/HEAD` plus `limen init` is a blank cabinet. `gh` on the box is HTTPS — do not `git@` unless you added a key. Do not copy `.limen/` to the laptop.
@@ -159,7 +159,7 @@ limen jobs --all
 journalctl -u limen-github.service -n 50 --no-pager
 ```
 
-`@limen` or `/limen` in a PR or issue conversation comment reaches the registered coordinator. So does `@limen` or `/limen` in the body of an open issue opened after `limen github connect`: once per issue, judged on the body as the poller first reads it, so a later edit never rings again. An issue title alone, a pull request body, `@limenology`, an issue already closed when first read, and comments on a closed PR or closed issue do not. The App checks the effective write-or-higher role of the comment or issue author and the installed repository. A warm Herdr agent with `agent_status` idle, working, blocked or done is live unless Herdr reports `interactive_ready: false`; Herdr omits that field for OMP panes. A bare shell is not live. The PR title, body, discussion, triggering text, real base/head and links are supplied as bounded, explicitly untrusted context. For an issue, the coordinator gets the issue title, body, recent conversation, triggering text (none when the body carries the request), and link as the same untrusted context; the prompt says it is an issue, with no base or head. One coordinator may be registered by several projects on this seat.
+`@limen` or `/limen` in a PR or issue conversation comment reaches the registered coordinator. So does `@limen` or `/limen` in the body of an open issue opened after `limen github connect`: once per issue, judged on the body as the poller first reads it, so a later edit never rings again. An issue title alone, a pull request body, `@limenology`, an issue already closed when first read, and comments on a closed PR or closed issue do not. The App checks the effective write-or-higher role of the comment or issue author and the installed repository. A warm Herdr agent with `agent_status` idle, working, blocked or done is live unless Herdr reports `interactive_ready: false`; Herdr omits that field for some agents. A bare shell is not live. The PR title, body, discussion, triggering text, real base/head and links are supplied as bounded, explicitly untrusted context. For an issue, the coordinator gets the issue title, body, recent conversation, triggering text (none when the body carries the request), and link as the same untrusted context; the prompt says it is an issue, with no base or head. One coordinator may be registered by several projects on this seat.
 
 The coordinator chooses a hosted review (`limen github review <root> <claim-id>` with explicit board model flags), a different hosted task (`limen github work … --task <instruction>`), or an explicit no-job answer (`limen github resolve …`). The claim ID is the triggering comment ID, or `issue-<number>` for an issue body, so the two never share a name. Review fetches and verifies the pinned PR head and real base; work uses a separate branch from the registered project, not a claim of having reviewed the PR. An issue claim accepts `work` (branch `limen/github-issue-<number>-<claim-id>`) and `resolve`; `review` refuses it, because an issue has no pull request head to review. The poller posts a start reply only after observing a matching hosted job and a terminal reply after actual completion; prompt acceptance alone is never success. `done` does not mean approval.
 
@@ -171,7 +171,7 @@ Accepted claims and cursors live under `/var/lib/limen-github/state/<sha256-of-a
 
 1. Walk through the [seat checklist](seat/README.md). Ubuntu LTS, 8 GB / 150 GB+, public SSH key-only, Tailscale MagicDNS.
 2. Pair Moshi on the box (`--store file`, linger) **before** moving the coordinator. ntfy only if Moshi is out.
-3. Node 24, Git, `gh`, `pi` (or `omp` with `LIMEN_ENGINE=omp`), Herdr, `limen` (`npm link` from `~/limen`). Checkout the work branch. `limen init`.
+3. Node 24, Git, `gh`, `pi`, Herdr, `limen` (`npm link` from `~/limen`). Checkout the work branch. `limen init`.
 4. Persistent Herdr session. `herdr --remote alice` (or your `Host` alias). First smoke: `--detached`.
 5. Prove, in order: lid-closed `--detached` job → phone rings → `limen jobs` on attach shows the same id → `tailscale serve` preview opens on the Mac.
 6. Only then live on the seat. The opt-in PR doorbell needs the separate App-user setup above. `LIMEN_SPAWN` and `LIMEN_NOTIFY` do not exist.
@@ -180,4 +180,4 @@ Accepted claims and cursors live under `/var/lib/limen-github/state/<sha256-of-a
 
 - [Vision](../spec/vision.md) — durable intent, including the seat/window split.
 - [F013 remote seat](../spec/features/done/2026-09/F013-remote-seat/ticket.md) — shop manual names seat vs window.
-- [SECURITY.md](../SECURITY.md) — a job runs as you (`pi --approve`, or `omp --auto-approve`), wherever the seat is.
+- [SECURITY.md](../SECURITY.md) — a job runs as you (`pi --approve`), wherever the seat is.

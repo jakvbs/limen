@@ -1,5 +1,5 @@
 // The shared throwaway plant every scenario runs on: a temp Git repo after a real `limen init`, an environment built
-// from an allowlist, the scripted fake engine (test/fake-engine.mjs) as `pi` and `omp`, and a fetch sink that records
+// from an allowlist, the scripted fake engine (test/fake-engine.mjs) as `pi`, and a fetch sink that records
 // every request a Limen process makes. Scenarios wait on `limen wait`, file events and FIFOs; nothing here sleeps.
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, readFileSync, watch } from "node:fs";
@@ -55,7 +55,7 @@ export async function plant(): Promise<Plant> {
 	const root = join(parent, "repo");
 	const bin = join(parent, "bin");
 	await Promise.all([mkdir(bin), mkdir(join(parent, "home"))]);
-	await Promise.all(["pi", "omp"].map((name) => symlink(FAKE_ENGINE, join(bin, name))));
+	await symlink(FAKE_ENGINE, join(bin, "pi"));
 	await writeFile(join(parent, "sink.mjs"), sinkSource(parent));
 	const env = {
 		PATH: `${bin}:${dirname(process.execPath)}:/usr/bin:/bin:/usr/sbin:/sbin`,

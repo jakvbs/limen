@@ -1,5 +1,5 @@
 // U11: what the live picture says a job does. A record that says running is never shown as working when its owner is
-// gone or it has been silent too long; finished jobs leave the page after an hour; job folders of both engines read
+// gone or it has been silent too long; finished jobs leave the page after an hour; detached and hosted job folders read
 // the same way; a coordinator's workers and a group's teams nest as one tree.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
@@ -23,7 +23,7 @@ const job = (over: Partial<JobFiles>): JobFiles => ({
 	spawning: false,
 	owner: "alive",
 	label: "F932 follow-up for F780",
-	engine: "omp",
+	engine: "pi",
 	model: "pi-claude/claude-opus-5-5",
 	activity: "tool",
 	lastTool: "bash",
@@ -94,9 +94,9 @@ test("the reader reads detached and hosted job folders the same way", async () =
 	});
 	await folder(jobs, "2026-10-08-f932-hosted-00000002", {
 		...running,
-		engine: "omp\n",
+		engine: "pi\n",
 		"tool-detail": "git log\n",
-		[session]: '{"type":"title"}\n{"type":"model_change","model":"pi-claude/claude-opus-5-5"}\n',
+		[session]: '{"type":"title"}\n{"type":"model_change","provider":"pi-claude","modelId":"claude-opus-5-5"}\n',
 	});
 	await folder(jobs, "2026-10-08-f932-gone-00000003", { ...running, pid: `${gone}\n` });
 	const snapshot = await activityReader(jobs)();

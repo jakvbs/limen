@@ -1,4 +1,4 @@
-// U5: the engine's launch argv and JSON stream. A pi-claude route names each engine's bridge. Lines split across
+// U5: the engine's launch argv and JSON stream. A pi-claude route names Pi's bridge. Lines split across
 // chunks still parse once; only an assistant stop reason of error or aborted marks a failed turn.
 import assert from "node:assert/strict";
 import { mkdir, mkdtemp, realpath, rm } from "node:fs/promises";
@@ -7,7 +7,7 @@ import test from "node:test";
 import { argvFor, ENGINES } from "../src/runtime/engine.ts";
 import { createStreamParser } from "../src/runtime/stream.ts";
 
-test("a pi-claude route loads Pi's installed bridge package; OMP gets it as one pi-claude/<model> id", async (t) => {
+test("a pi-claude route loads Pi's installed bridge package", async (t) => {
 	const home = await realpath(await mkdtemp(`${tmpdir()}/limen-home-`));
 	process.env.HOME = home;
 	t.after(() => rm(home, { recursive: true }));
@@ -16,9 +16,6 @@ test("a pi-claude route loads Pi's installed bridge package; OMP gets it as one 
 	const slots = { jsonMode: true, jobDir: "/j", label: "l", preamble: "p", extensions: [], taskFile: "/j/task.md" };
 	const pi = argvFor(ENGINES.pi, { ...slots, provider: "pi-claude", model: "claude-opus-5-5" }).join(" ");
 	assert.ok(pi.includes(`--extension ${bridge} --provider pi-claude --model claude-opus-5-5 `), pi);
-	const long = argvFor(ENGINES.omp, { ...slots, model: "pi-claude/claude-opus-5-5" });
-	assert.deepEqual(argvFor(ENGINES.omp, { ...slots, provider: "pi-claude", model: "claude-opus-5-5" }), long);
-	assert.deepEqual(argvFor(ENGINES.omp, { ...slots, provider: "pi-claude", model: "pi-claude/claude-opus-5-5" }), long);
 });
 
 const end = (message: object) => JSON.stringify({ type: "message_end", message });

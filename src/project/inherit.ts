@@ -23,9 +23,6 @@ const HOOK_COPIES = [
 	".pi/extensions/limen-wake.ts",
 	".pi/extensions/limen-communication.ts",
 	".pi/extensions/limen-steering.ts",
-	".omp/extensions/limen-wake.ts",
-	".omp/extensions/limen-communication.ts",
-	".omp/extensions/limen-steering.ts",
 ] as const;
 
 type Revision = { readonly hash: string; readonly date: string };

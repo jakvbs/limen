@@ -9,7 +9,7 @@ import { git, jobDir, jobFile, limen, plant, release, spawnJob, TICKET, waitJob 
 
 const p = await plant();
 after(p.cleanup);
-const ROUTE = ["--engine", "omp", "--provider", "p", "--model", "m", "--thinking", "high"];
+const ROUTE = ["--engine", "pi", "--provider", "p", "--model", "m", "--thinking", "high"];
 const lane = (name: string) =>
 	existsSync(join(p.root, "spec/features", name)) ? readdirSync(join(p.root, "spec/features", name)) : [];
 

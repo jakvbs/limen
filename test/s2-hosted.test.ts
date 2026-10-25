@@ -124,12 +124,12 @@ before(async () => {
 after(() => p.cleanup().finally(() => socket.close()));
 
 let second = "";
-test("a live OMP job stays running while Herdr reports done, then after Herdr loses its agent row (88fd5ac)", async () => {
-	second = spawnJob(p, "block\nfinish\nfinish omp done", ["--tab", "--engine", "omp", "--label", "F001 omp"], { env });
+test("a hosted job stays running while Herdr reports done, then after it loses the agent row (88fd5ac)", async () => {
+	second = spawnJob(p, "block\nfinish\nfinish ok", ["--tab", "--engine", "pi", "--label", "F001 live"], { env });
 	await until(jobDir(p, second), () => existsSync(join(jobDir(p, second), "fake-blocked-1")));
 	const target = pane(second);
 	const start = named("agent", "start").find((args) => args.includes(target)) ?? [];
-	assert.equal(start[start.indexOf("--kind") + 1], "omp");
+	assert.equal(start[start.indexOf("--kind") + 1], "pi");
 	// Herdr says the agent is done (unseen idle); only the session or the process ending finishes a hosted job.
 	await until(herdr, () => named("agent", "get").filter((args) => args[2] === target).length >= 2);
 	assert.equal(jobFile(p, second, "state"), "running", "Herdr done is not job completion");
@@ -146,7 +146,7 @@ test("two competing sweeps start exactly one replacement for a killed hosted sup
 	assert.equal(starts(second), 1);
 	const supervisor = Number(jobFile(p, second, "pid"));
 	// pid 0 would signal this test's own process group.
-	assert.ok(supervisor > 0 && jobFile(p, second, "state") === "running", "the OMP job is still supervised");
+	assert.ok(supervisor > 0 && jobFile(p, second, "state") === "running", "the hosted job is still supervised");
 	process.kill(supervisor, "SIGKILL");
 	// SIGKILL leaves no finalizer; the sweeps must see a dead owner, so wait for the kernel to drop the pid.
 	while (alive(supervisor)) {
@@ -156,7 +156,7 @@ test("two competing sweeps start exactly one replacement for a killed hosted sup
 	await until(dir, () => starts(second) >= 2);
 	assert.equal(jobFile(p, second, "state"), "running");
 	await release(dir);
-	assert.deepEqual([waitJob(p, second, { env }), jobFile(p, second, "result")], ["done", "omp done"]);
+	assert.deepEqual([waitJob(p, second, { env }), jobFile(p, second, "result")], ["done", "ok"]);
 	assert.deepEqual([starts(second), jobFile(p, second, "log").includes("failed:")], [2, false], "one replacement");
 });
 

@@ -1,11 +1,9 @@
 import { appendFileSync, existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { noteCheck } from "../src/job/task-note.ts";
-import { assistantStopReason } from "../src/runtime/stream.ts";
 
 type Text = { readonly type: "text"; readonly text: string };
 type SettleEvent = { readonly outcome?: string; readonly entries?: readonly unknown[] };
-type StopEvent = { readonly last_assistant_message?: unknown };
 type PiApi = {
 	registerTool?(tool: {
 		readonly name: string;
@@ -21,17 +19,16 @@ type PiApi = {
 		): Promise<{ content: Text[]; details: object }>;
 	}): void;
 	on(event: "agent_before_settle", handler: (event: SettleEvent) => object | undefined): void;
-	on(event: "session_stop", handler: (event: StopEvent) => object | undefined): void;
 };
 
 /**
  * `finish` for every Limen job, hosted or detached. A detached job resumed from a hosted session keeps the hosted
- * transcript, and the model calls `finish` again; omp mounts it as `xd://finish`. The handoff becomes the job result,
+ * transcript, and the model calls `finish` again. The handoff becomes the job result,
  * and the session ends after this turn.
  *
  * Once per job, before the finish, the agent gets its task note to check: the first `finish` call answers with the
- * check, and a detached run that ends without `finish` gets it as one more turn. Pi gives that turn from 1.2.0
- * (`agent_before_settle`), omp through `session_stop`. A hosted run ends at each owner message, so only `finish` asks.
+ * check, and a detached run that ends without `finish` gets it as one more turn through Pi's `agent_before_settle`.
+ * A hosted run ends at each owner message, so only `finish` asks.
  */
 export default function limenFinish(pi: PiApi): void {
 	const root = process.env.LIMEN_CONTEXT_ROOT;
@@ -89,9 +86,5 @@ export default function limenFinish(pi: PiApi): void {
 		}
 		const entry = { type: "custom_message", customType: "limen-note-check", content: ask, display: false };
 		return { entries: [...(event.entries ?? []), entry], continue: true };
-	});
-	pi.on("session_stop", (event) => {
-		const ask = assistantStopReason(event.last_assistant_message) ? undefined : check(false);
-		return ask ? { continue: true, additionalContext: ask } : undefined;
 	});
 }

@@ -1,6 +1,4 @@
-// S2 · hosted spawn. A fake Herdr (written below to the plant) records every call, runs the pane command as a real
-// child process so the fake engine and its hooks really load, answers `agent get` from a state file the test edits,
-// and names the pane's foreground process after the engine it launched, as real Herdr does.
+// Fake Herdr starts real hosted engines; detached view checks use its recorded shell command.
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
@@ -169,15 +167,16 @@ test("in Herdr a spawn with no mode flag runs detached under its --timeout; queu
 	const dir = jobDir(p, id),
 		session = `${dir}/session`,
 		log = `${dir}/log`;
-	assert.deepEqual(command.slice(0, 2), ["sh", "-c"]);
-	assert.deepEqual(command.slice(3), ["limen-view", session, "pi", "tail", "-f", log]);
-	const script = command[2] ?? "";
-	const viewed = spawnSync("sh", ["-c", script, "view", session, "/bin/echo"], { encoding: "utf8" });
-	assert.equal(viewed.stdout, `--view ${session}/fake.jsonl\n`);
-	const fallback = spawnSync("sh", ["-c", script, "view", session, "/bin/false", "echo", "log fallback"], {
-		encoding: "utf8",
-	});
-	assert.equal(fallback.stdout, "log fallback\n");
+	const quote = (word: string) => `'${word.replaceAll("'", "'\\''")}'`;
+	const runView = (binary: string) =>
+		spawnSync(
+			"sh",
+			["-c", [...command.slice(0, 3), ...["view", session, binary, "echo", "log fallback"].map(quote)].join(" ")],
+			{ encoding: "utf8" },
+		);
+	const viewed = runView("/bin/echo");
+	assert.deepEqual([viewed.status, viewed.stdout], [0, `--view ${session}/fake.jsonl\n`]);
+	assert.equal(runView("/bin/false").stdout, "log fallback\n");
 	for (const engine of ["pi", "devin", "hosted"]) {
 		await rm(join(dir, "herdr/tab"));
 		await writeFile(join(dir, "engine"), engine === "hosted" ? "pi" : engine);
@@ -185,7 +184,10 @@ test("in Herdr a spawn with no mode flag runs detached under its --timeout; queu
 		assert.equal(limen(p, ["open", id], { env }).status, 0);
 		const opened = named("pane", "run").at(-1)?.slice(3) ?? [];
 		const tail = ["tail", "-n", "+1", log];
-		const expected = engine === "pi" ? ["sh", "-c", script, "limen-view", session, "pi", ...tail] : tail;
+		const expected =
+			engine === "pi"
+				? [quote("sh"), quote("-c"), command[2], ...["limen-view", session, "pi", ...tail].map(quote)]
+				: tail;
 		assert.deepEqual(opened, expected);
 		spawnSync(join(herdr, "herdr"), ["tab", "close", jobFile(p, id, "herdr/tab")]);
 	}

@@ -176,8 +176,9 @@ test("in Herdr a spawn with no mode flag runs detached under its --timeout; queu
 		});
 	const viewed = runView("/bin/echo");
 	assert.deepEqual([viewed.status, viewed.stdout], [0, `--view ${session}/fake.jsonl\n`]);
-	const fallback = runView("/bin/false");
+	const fallback = runView("/bin/false"); // A failed view, then a finished job without a session file: both show the log.
 	assert.deepEqual([fallback.status, fallback.stdout], [0, readFileSync(log, "utf8")]);
+	assert.ok(await rm(join(session, "fake.jsonl")).then(() => runView("/bin/echo").stdout.startsWith(fallback.stdout)));
 	for (const engine of ["pi", "devin", "hosted"]) {
 		await rm(join(dir, "herdr/tab"));
 		await writeFile(join(dir, "engine"), engine === "hosted" ? "pi" : engine);

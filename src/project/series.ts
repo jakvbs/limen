@@ -10,6 +10,7 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { basename, join, resolve } from "node:path";
+import { isGitRepository, workspaceRoot } from "./git.ts";
 import { readOptional } from "./inherit.ts";
 import { seatDir, withSeatLock } from "./seat.ts";
 
@@ -187,13 +188,22 @@ function highestTaken(plants: readonly string[]): number {
 	let highest = 0;
 	for (const plant of new Set(plants.map(real))) {
 		// A number can live only on a branch or in a job before its folder reaches this checkout (the two F778 tickets).
-		const branches = spawnSync("git", ["for-each-ref", "--format=%(refname:short)", "refs/heads/limen/"], {
-			cwd: plant,
-			encoding: "utf8",
-		});
+		// A workspace plant is no Git repository; its branches live in the child repositories.
+		const repositories = workspaceRoot(plant)
+			? subdirectories(plant)
+					.map((name) => join(plant, name))
+					.filter(isGitRepository)
+			: [plant];
+		const branches = repositories.map(
+			(cwd) =>
+				spawnSync("git", ["for-each-ref", "--format=%(refname:short)", "refs/heads/limen/"], {
+					cwd,
+					encoding: "utf8",
+				}).stdout ?? "",
+		);
 		const jobs = join(plant, ".limen", "jobs");
 		const labels = subdirectories(jobs).map((id) => `${id}\n${readOptional(join(jobs, id, "label")) ?? ""}`);
-		const named = `${branches.stdout ?? ""}\n${labels.join("\n")}`.matchAll(/\bf(\d{3,4})\b/gi);
+		const named = `${branches.join("\n")}\n${labels.join("\n")}`.matchAll(/\bf(\d{3,4})\b/gi);
 		for (const number of [
 			...ticketFolders(plant).map((folder) => folder.code.slice(1)),
 			...archiveRows(plant).map((row) => row.number),

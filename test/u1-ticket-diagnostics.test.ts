@@ -1,4 +1,3 @@
-// U1: ticket front matter faults each give the ticket file, the line and a fix; `limen ticket check` and land read these.
 import assert from "node:assert/strict";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -9,31 +8,13 @@ import { checkTickets, readTickets } from "../src/picture/tickets.ts";
 const tickets: Record<string, string> = {
 	"active/F780-place":
 		"---\ntouches:\n  - plant.viewer\n  - plant.misspelled\nopened: 2026-10-06\n---\n# F780 · Place\n\n## Outcome\n\nAdam reads **one** page. It stays current.\n",
-	"active/F781-fields": `---
-touch: plant.viewer
-touches: plant.viewer
-opened: 2026-02-30
-needs-adam: "First line\\nsecond line"
-wrong: This is wrong.
-wrong-on: 2026-10-06
----
-# F781 · Fields
-`,
+	"active/F781-fields":
+		'---\ntouch: plant.viewer\ntouches: plant.viewer\nopened: 2026-02-30\nneeds-adam: "First line\\nsecond line"\nwrong: This is wrong.\nwrong-on: 2026-10-06\n---\n# F781 · Fields\n',
 	"active/F782-flags":
 		"---\nopened: 2026-10-06\nneeds-adam: Decide today.\nwrong-on: 2026-10-05\n---\n# F782 · Flags\n",
 	"active/F783-legacy": "# F783 Legacy ticket\n",
-	"active/F785-duplicate": `---
-touches:
-  - plant.viewer
-  - plant.viewer
-opened: 2026-10-06
-needs-adam: Keep the atlas?
-needs-adam-on: 2026-10-05
-wrong: The context is lost.
-wrong-on: 2026-10-04
----
-# F785 · Duplicate place
-`,
+	"active/F785-duplicate":
+		"---\ntouches:\n  - plant.viewer\n  - plant.viewer\nopened: 2026-10-06\nneeds-adam: Keep the atlas?\nneeds-adam-on: 2026-10-05\nwrong: The context is lost.\nwrong-on: 2026-10-04\n---\n# F785 · Duplicate place\n",
 	"active/F786-unclosed": "---\ntouches:\n  - plant.viewer\n",
 	"active/F778-finish-signal": "---\ntouches:\n  - plant.viewer\nopened: 2026-10-06\n---\n# F778 · Finish signal\n",
 	"active/F778-job-done": "# F778 · Job done\n",

@@ -2,7 +2,7 @@
 // ticket-author paths, all through the real CLI. The strict ticket gate is s5's land refusal and u1's diagnostics.
 import assert from "node:assert/strict";
 import { existsSync, readdirSync } from "node:fs";
-import { mkdir, symlink, writeFile } from "node:fs/promises";
+import { cp, mkdir, readFile, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { after, test } from "node:test";
 import { git, jobDir, jobFile, limen, plant, release, repository, spawnJob, start, TICKET, waitJob } from "./plant.ts";
@@ -30,9 +30,30 @@ test("ticket new refuses an unknown place id before any file exists, then takes 
 	assert.ok(existsSync(join(p.root, made.stdout.trim())));
 });
 
-test("picture build --dir takes a plant root from any folder and stops on a folder with no map", () => {
-	const built = limen(p, ["picture", "build", "--strict", "--dir", p.root], { cwd: p.parent });
-	assert.match(`${built.status} ${built.stdout}`, /^0 picture: [1-9]\d* places/, built.stderr);
+test("workspace numbers count child branches and job labels; strict builds check the map owner's tickets", async () => {
+	const cwd = p.parent;
+	assert.equal(limen(p, ["workspace", "init"], { cwd }).status, 0);
+	await cp(join(p.root, ".limen/picture"), join(cwd, ".limen/picture"), { recursive: true });
+	await mkdir(join(cwd, "spec/features/done/2026-09/F004-x"), { recursive: true });
+	const branch = limen(p, ["ticket", "new", "branch"], { cwd });
+	assert.equal(branch.stdout, "spec/features/planned/F010-branch/ticket.md\n", branch.stderr);
+	await mkdir(join(cwd, ".limen/jobs/label-only"), { recursive: true });
+	await writeFile(join(cwd, ".limen/jobs/label-only/label"), "F012 label proof");
+	const made = limen(p, ["ticket", "new", "workspace", "--touches", "demo.place"], { cwd });
+	assert.equal(made.stdout, "spec/features/planned/F013-workspace/ticket.md\n", made.stderr);
+	const path = join(cwd, made.stdout.trim());
+	assert.ok(existsSync(path));
+	assert.equal(existsSync(join(cwd, ".git")), false);
+	for (const root of [p.root, cwd]) {
+		const built = limen(p, ["picture", "build", "--strict", "--dir", root], { cwd: p.bin });
+		assert.match(`${built.status} ${built.stdout}`, /^0 picture: [1-9]\d* places/, built.stderr);
+	}
+	await writeFile(path, (await readFile(path, "utf8")).replace(/opened: .*/, "opened: invalid"));
+	for (const options of [[], ["--dir", join(cwd, ".limen/picture")]]) {
+		const bad = limen(p, ["picture", "build", "--strict", ...options], { cwd });
+		assert.equal(bad.status, 1, bad.stderr);
+		assert.match(bad.stderr, /error ticket.bad-field spec\/features\/planned\/F013-workspace\/ticket.md:4:.*fix:/);
+	}
 	const { status, stderr } = limen(p, ["picture", "build", "--dir", p.bin]);
 	assert.match(`${status} ${stderr}`, /^1 \S+\/bin has no plant file .+ no map yet in \S+\/bin\/\.limen\/picture\./);
 });

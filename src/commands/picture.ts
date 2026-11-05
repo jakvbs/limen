@@ -1,11 +1,11 @@
 import { existsSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import type { ParseArgsOptionsConfig } from "node:util";
 import { readDataset } from "../picture/dataset.ts";
 import { parseFrontmatter } from "../picture/frontmatter.ts";
 import { buildPicture } from "../picture/picture-build.ts";
 import { servePicture } from "../picture/picture-serve.ts";
-import { gitCommonDir, headCommit, repoRoot } from "../project/git.ts";
+import { gitCommonDir, headCommit, limenRoot, repoRoot, workspaceRoot } from "../project/git.ts";
 import { firstPictureHint, pictureTick } from "../project/picture-tick.ts";
 import { pictureWatch } from "../project/picture-watch.ts";
 import { parseFlags } from "./flags.ts";
@@ -80,7 +80,8 @@ export async function pictureCommand(args: readonly string[], cwd: string): Prom
 	}
 	const out = resolve(cwd, values.get("--out") ?? `${picture}/map.html`);
 	const json = values.get("--json");
-	const model = await buildPicture(picture, out, json ? resolve(cwd, json) : undefined, headCommit(root), root);
+	const tip = gitCommonDir(root) ? headCommit(root) : undefined;
+	const model = await buildPicture(picture, out, json ? resolve(cwd, json) : undefined, tip, root);
 	for (const d of model.diagnostics) {
 		console.error(
 			`${d.level} ${d.code}${d.source ? ` ${d.source}${d.line === null ? "" : `:${d.line}`}` : ""}: ${d.message}`,
@@ -93,17 +94,22 @@ export async function pictureCommand(args: readonly string[], cwd: string): Prom
 }
 
 /**
- * The map folder, the checkout whose tickets and board join it, and the plant's live jobs. All come from the repository
- * that holds the map, except that a checkout of that repository, a job worktree too, keeps its own tickets and board:
+ * The map folder, the checkout or workspace whose tickets and board join it, and the plant's live jobs. All come from
+ * the map's owner, except that a checkout of that repository, a job worktree too, keeps its own tickets and board:
  * a branch checks its tickets against the plant's map.
  */
 async function pictureSources(
 	cwd: string,
 	dir: string | undefined,
 ): Promise<{ picture: string; root: string; jobs: string }> {
-	const picture = await mapFolder(dir === undefined ? repoRoot(cwd) : resolve(cwd, dir));
-	const owner = repoRoot(picture);
-	const root = gitCommonDir(cwd) === gitCommonDir(owner) ? repoRoot(cwd) : owner;
+	const picture = await mapFolder(dir === undefined ? limenRoot(cwd) : resolve(cwd, dir));
+	let owner = picture;
+	while (!workspaceRoot(owner) && !gitCommonDir(owner) && dirname(owner) !== owner) {
+		owner = dirname(owner);
+	}
+	owner = limenRoot(owner);
+	const common = gitCommonDir(owner);
+	const root = common !== undefined && gitCommonDir(cwd) === common ? repoRoot(cwd) : owner;
 	return { picture, root, jobs: `${owner}/.limen/jobs` };
 }
 

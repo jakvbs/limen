@@ -5,7 +5,7 @@ import { basename, join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { closedFeatures, closedJobFeatures } from "../job/job.ts";
 import { seatDir } from "../project/seat.ts";
-import { ENGINES, type EngineId, engineProfile } from "../runtime/engine.ts";
+import { ENGINES, type EngineId, engineBinary, engineProfile, jobProfile } from "../runtime/engine.ts";
 
 export type HerdrPlace = {
 	readonly workspace: string;
@@ -758,18 +758,50 @@ async function createTab(input: {
 			advisoryCall(herdr, ["tab", "close", seeded]);
 		}
 		if (!input.shellOnly) {
-			call(
-				herdr,
-				input.follow
-					? ["pane", "run", place.pane, "tail", "-f", input.logPath]
-					: ["pane", "run", place.pane, "tail", "-n", "+1", input.logPath],
-			);
+			const tail = input.follow ? ["tail", "-f", input.logPath] : ["tail", "-n", "+1", input.logPath];
+			await runJobView(herdr, place.pane, input.jobDir, tail);
 		}
 		return place;
 	} catch (error) {
 		await skip(input.jobDir, error instanceof Error ? error.message : String(error));
 	}
 }
+
+async function runJobView(herdr: string, pane: string, jobDir: string, tail: readonly string[]): Promise<void> {
+	const profile = await jobProfile(jobDir);
+	if (profile.id !== "pi" || (await text(`${jobDir}/hosted`))) {
+		call(herdr, ["pane", "run", pane, ...tail]);
+		return;
+	}
+	try {
+		call(herdr, [
+			"pane",
+			"run",
+			pane,
+			"sh",
+			"-c",
+			PI_VIEW,
+			"limen-view",
+			`${jobDir}/session`,
+			engineBinary(profile),
+			...tail,
+		]);
+	} catch {
+		call(herdr, ["pane", "run", pane, ...tail]);
+	}
+}
+
+// Pi resolves a directory only once. Wait for the worker's single session file before starting the view.
+const PI_VIEW = `directory=$1; pi=$2; shift 2
+while :; do
+  for file in "$directory"/*.jsonl; do
+    if [ -f "$file" ]; then
+      "$pi" --view "$file" || exec "$@"
+      exit
+    fi
+  done
+  sleep 0.2
+done`;
 
 /** The one rule for the Herdr binary: `LIMEN_HERDR=0` turns Herdr off; another value must exist; otherwise `herdr` on PATH. */
 export function herdrBinary(): string | undefined {

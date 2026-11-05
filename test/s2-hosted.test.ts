@@ -4,7 +4,7 @@
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import { chmod, mkdir, mkdtemp, rename, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, rename, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
@@ -162,7 +162,32 @@ test("in Herdr a spawn with no mode flag runs detached under its --timeout; queu
 	const id = run.stdout.trim().split("\n").at(-1) ?? "";
 	await writeFile(reading, "{}");
 	assert.equal(waitJob(p, id, { env }), "done");
-	assert.equal(jobFile(p, id, "herdr/mode"), "watch", "a log-tail tab, not a hosted pane");
+	const command =
+		named("pane", "run")
+			.find((args) => args[2] === pane(id))
+			?.slice(3) ?? [];
+	const dir = jobDir(p, id),
+		session = `${dir}/session`,
+		log = `${dir}/log`;
+	assert.deepEqual(command.slice(0, 2), ["sh", "-c"]);
+	assert.deepEqual(command.slice(3), ["limen-view", session, "pi", "tail", "-f", log]);
+	const script = command[2] ?? "";
+	const viewed = spawnSync("sh", ["-c", script, "view", session, "/bin/echo"], { encoding: "utf8" });
+	assert.equal(viewed.stdout, `--view ${session}/fake.jsonl\n`);
+	const fallback = spawnSync("sh", ["-c", script, "view", session, "/bin/false", "echo", "log fallback"], {
+		encoding: "utf8",
+	});
+	assert.equal(fallback.stdout, "log fallback\n");
+	for (const engine of ["pi", "devin", "hosted"]) {
+		await rm(join(dir, "herdr/tab"));
+		await writeFile(join(dir, "engine"), engine === "hosted" ? "pi" : engine);
+		await writeFile(join(dir, "hosted"), engine === "hosted" ? "1" : "");
+		assert.equal(limen(p, ["open", id], { env }).status, 0);
+		const opened = named("pane", "run").at(-1)?.slice(3) ?? [];
+		const tail = ["tail", "-n", "+1", log];
+		const expected = engine === "pi" ? ["sh", "-c", script, "limen-view", session, "pi", ...tail] : tail;
+		assert.deepEqual(opened, expected);
+	}
 	const receipts = ["herdr-start", "herdr-prompt"].map((name) => () => jobFile(p, id, `notify/${name}`));
 	await until(jobDir(p, id), () => receipts.every((receipt) => receipt().startsWith("attempt 1: delivered to")));
 	const sent = [...named("agent", "prompt").map((args) => args[3] ?? ""), ...asked].filter((text) => text.includes(id));

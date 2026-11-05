@@ -5,7 +5,7 @@ import { basename, join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { closedFeatures, closedJobFeatures } from "../job/job.ts";
 import { seatDir } from "../project/seat.ts";
-import { ENGINES, type EngineId, engineBinary, engineProfile, jobProfile } from "../runtime/engine.ts";
+import { ENGINES, type EngineId, engineProfile, jobProfile } from "../runtime/engine.ts";
 
 export type HerdrPlace = {
 	readonly workspace: string;
@@ -779,26 +779,14 @@ async function runJobView(herdr: string, pane: string, jobDir: string, tail: rea
 			"run",
 			pane,
 			// Herdr joins words into a command for the pane's shell; it does not exec an argv.
-			...["sh", "-c", PI_VIEW, "limen-view", `${jobDir}/session`, engineBinary(profile), ...tail].map(
-				(word) => `'${word.replaceAll("'", "'\\''")}'`,
-			),
+			"limen",
+			"view",
+			`'${basename(jobDir).replaceAll("'", "'\\''")}'`,
 		]);
 	} catch {
 		call(herdr, ["pane", "run", pane, ...tail]);
 	}
 }
-
-// Pi resolves a directory only once. Wait for the worker's single session file before starting the view.
-const PI_VIEW = `directory=$1; pi=$2; shift 2
-while :; do
-  for file in "$directory"/*.jsonl; do
-    if [ -f "$file" ]; then
-      "$pi" --view "$file" || exec "$@"
-      exit
-    fi
-  done
-  sleep 0.2
-done`;
 
 /** The one rule for the Herdr binary: `LIMEN_HERDR=0` turns Herdr off; another value must exist; otherwise `herdr` on PATH. */
 export function herdrBinary(): string | undefined {

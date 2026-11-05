@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { createInterface } from "node:readline";
 import { after, before, test } from "node:test";
 import { fileURLToPath } from "node:url";
-import { FINAL, jobDir, jobFile, limen, type Plant, plant, release, spawnJob, start, until, waitJob } from "./plant.ts";
+import { FINAL, jobDir, jobFile, LIMEN, limen, type Plant, plant, release, spawnJob, start, until, waitJob } from "./plant.ts";
 
 const WAKE = fileURLToPath(new URL("../hook/wake.ts", import.meta.url));
 
@@ -167,15 +167,17 @@ test("in Herdr a spawn with no mode flag runs detached under its --timeout; queu
 		session = `${dir}/session`,
 		log = `${dir}/log`;
 	const quote = (word: string) => `'${word.replaceAll("'", "'\\''")}'`;
+	assert.deepEqual(command, ["limen", "view", quote(id)]);
 	const runView = (binary: string) =>
-		spawnSync(
-			"sh",
-			["-c", [...command.slice(0, 3), ...["view", session, binary, "echo", "log fallback"].map(quote)].join(" ")],
-			{ encoding: "utf8" },
-		);
+		spawnSync("sh", ["-c", command.join(" ")], {
+			cwd: p.root,
+			encoding: "utf8",
+			env: { ...p.env, PATH: `${join(LIMEN, "..")}:${p.env.PATH}`, LIMEN_PI: binary },
+		});
 	const viewed = runView("/bin/echo");
 	assert.deepEqual([viewed.status, viewed.stdout], [0, `--view ${session}/fake.jsonl\n`]);
-	assert.equal(runView("/bin/false").stdout, "log fallback\n");
+	const fallback = runView("/bin/false");
+	assert.deepEqual([fallback.status, fallback.stdout], [0, readFileSync(log, "utf8")]);
 	for (const engine of ["pi", "devin", "hosted"]) {
 		await rm(join(dir, "herdr/tab"));
 		await writeFile(join(dir, "engine"), engine === "hosted" ? "pi" : engine);
@@ -183,10 +185,7 @@ test("in Herdr a spawn with no mode flag runs detached under its --timeout; queu
 		assert.equal(limen(p, ["open", id], { env }).status, 0);
 		const opened = named("pane", "run").at(-1)?.slice(3) ?? [];
 		const tail = ["tail", "-n", "+1", log];
-		const expected =
-			engine === "pi"
-				? [quote("sh"), quote("-c"), command[2], ...["limen-view", session, "pi", ...tail].map(quote)]
-				: tail;
+		const expected = engine === "pi" ? ["limen", "view", quote(id)] : tail;
 		assert.deepEqual(opened, expected);
 		spawnSync(join(herdr, "herdr"), ["tab", "close", jobFile(p, id, "herdr/tab")]);
 	}

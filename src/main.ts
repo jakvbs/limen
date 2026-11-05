@@ -6,6 +6,7 @@ import { githubCommand } from "./commands/github.ts";
 import { groupCommand } from "./commands/group.ts";
 import { highlightCommand } from "./commands/highlight.ts";
 import { initCommand, workspaceCommand } from "./commands/init.ts";
+import { viewCommand } from "./commands/job-view.ts";
 import { jobsCommand } from "./commands/jobs.ts";
 import { keeperCommand } from "./commands/keeper.ts";
 import { landCommand } from "./commands/land.ts";
@@ -54,6 +55,7 @@ const COMMANDS = {
 	watch: watchCommand,
 	unwatch: unwatchCommand,
 	open: openCommand,
+	view: viewCommand,
 	picture: pictureCommand,
 	close: closeCommand,
 	sweep: sweepCommand,
@@ -85,6 +87,7 @@ const COMMANDS = {
 	| "watch"
 	| "unwatch"
 	| "open"
+	| "view"
 	| "picture"
 	| "close"
 	| "sweep"
@@ -135,6 +138,7 @@ usage:
   limen watch <id|suffix|label> | --running
   limen unwatch <id|suffix|label> | --all
   limen open <id|suffix|label>
+  limen view <id|suffix|label>                  # pi session view, with log fallback
   limen close <FNNN>
   limen ticket-author <ticket-path>                 # creation-commit author, following Git renames
   limen ticket new "what becomes true" [--lane planned|active] [--touches id,id]  # next unused F number across lanes, archive.tsv, limen/* branches, job labels and the plant's series

@@ -1,4 +1,3 @@
-// Fake Herdr starts real hosted engines; detached view checks use its recorded shell command.
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";

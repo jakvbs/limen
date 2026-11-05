@@ -778,13 +778,10 @@ async function runJobView(herdr: string, pane: string, jobDir: string, tail: rea
 			"pane",
 			"run",
 			pane,
-			"sh",
-			"-c",
-			PI_VIEW,
-			"limen-view",
-			`${jobDir}/session`,
-			engineBinary(profile),
-			...tail,
+			// Herdr joins words into a command for the pane's shell; it does not exec an argv.
+			...["sh", "-c", PI_VIEW, "limen-view", `${jobDir}/session`, engineBinary(profile), ...tail].map(
+				(word) => `'${word.replaceAll("'", "'\\''")}'`,
+			),
 		]);
 	} catch {
 		call(herdr, ["pane", "run", pane, ...tail]);

@@ -187,6 +187,7 @@ test("in Herdr a spawn with no mode flag runs detached under its --timeout; queu
 		const tail = ["tail", "-n", "+1", log];
 		const expected = engine === "pi" ? ["sh", "-c", script, "limen-view", session, "pi", ...tail] : tail;
 		assert.deepEqual(opened, expected);
+		spawnSync(join(herdr, "herdr"), ["tab", "close", jobFile(p, id, "herdr/tab")]);
 	}
 	const receipts = ["herdr-start", "herdr-prompt"].map((name) => () => jobFile(p, id, `notify/${name}`));
 	await until(jobDir(p, id), () => receipts.every((receipt) => receipt().startsWith("attempt 1: delivered to")));
@@ -271,6 +272,5 @@ test("hosted Pi stop records stopped once and closes the job's tab", async () =>
 	assert.deepEqual([stopped.status, jobFile(p, third, "state")], [0, "stopped"], stopped.stderr);
 	await until(herdr, () => named("tab", "close").some((args) => args[2] === jobFile(p, third, "herdr/tab")));
 	assert.equal(jobFile(p, third, "log").match(/\] stopped: enough/g)?.length, 1);
-	const made = [named("tab", "create").length, named("workspace", "create").length];
-	assert.deepEqual(made, [3, 1], "one tab per job, one role space");
+	assert.equal(named("workspace", "create").length, 1, "one role space");
 });

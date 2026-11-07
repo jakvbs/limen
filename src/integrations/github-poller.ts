@@ -126,7 +126,9 @@ async function privatePath(path: string, allowed: readonly number[]): Promise<vo
 	const real = await realpath(path);
 	for (let parent = dirname(real); ; parent = dirname(parent)) {
 		const info = await stat(parent);
-		if (!allowed.includes(info.uid) || (info.mode & 0o022) !== 0) {
+		// A root-owned sticky folder such as Linux /tmp lets no other user rename or remove the entry below it.
+		const shared = info.uid === 0 && (info.mode & 0o1000) !== 0;
+		if (!allowed.includes(info.uid) || ((info.mode & 0o022) !== 0 && !shared)) {
 			throw new Error(`unsafe owner or permissions on ${parent}`);
 		}
 		if (parent === dirname(parent)) {

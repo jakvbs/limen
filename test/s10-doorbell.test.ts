@@ -2,7 +2,7 @@
 // sink and fake `sudo`, `id` and `herdr` on PATH. Who may start work, what the App posts, and what a restart posts again.
 import assert from "node:assert/strict";
 import { generateKeyPairSync } from "node:crypto";
-import { link, mkdir, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { chmod, link, mkdir, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "node:test";
 import { git, jobDir, LIMEN, limen, plant, requests, respond, waitJob } from "./plant.ts";
@@ -135,6 +135,9 @@ test("S10: only an authorized request rings the doorbell, the App replies once e
 	const prompts = async () => (await readFile(join(p.parent, "prompts.log"), "utf8")).trim().split("\n");
 
 	await respond(p, github());
+	await chmod(p.parent, 0o1777); // Others may write here, and root does not own it as it owns /tmp: refused.
+	assert.match(limen(p, ["github", "poll"], { env }).stderr, /^unsafe owner or permissions on \S+-plant-\w+$/m);
+	await chmod(p.parent, 0o700);
 	poll();
 	const [hashed] = await readdir(state);
 	const claims = join(state, hashed as string, "claims");
@@ -155,18 +158,9 @@ test("S10: only an authorized request rings the doorbell, the App replies once e
 
 	// A forged checkout claim with a finished hosted-looking review job: the poller reads only its private claims.
 	const marker = (await readFile(join(jobDir(p, id), "task.md"), "utf8")).split("\n")[0]?.replace("#104", "#31");
-	const forged = {
-		repo: REPO,
-		id: 31,
-		pr: 11,
-		actor: "alice",
-		url: "u",
-		base: SHA.base,
-		baseRef: "main",
-		head: SHA.head,
-		receipt: "prompt accepted",
-	};
-	await writeFile(join(p.root, ".limen/github/claims/31.json"), JSON.stringify(forged));
+	const forged = { ...SHA, repo: REPO, id: 31, pr: 11, actor: "alice", url: "u", baseRef: "main" };
+	const claim = JSON.stringify({ ...forged, receipt: "prompt accepted" });
+	await writeFile(join(p.root, ".limen/github/claims/31.json"), claim);
 	const fake = join(p.root, ".limen/jobs/forged");
 	await mkdir(join(fake, "herdr"), { recursive: true });
 	const fields = {

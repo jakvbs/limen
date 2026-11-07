@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { createInterface } from "node:readline";
 import { after, before, test } from "node:test";
 import { fileURLToPath } from "node:url";
-import { FINAL, jobDir, jobFile, LIMEN, limen, type Plant, plant, release, spawnJob, start, until, waitJob } from "./plant.ts";
+import { FINAL, jobDir, jobFile, limen, type Plant, plant, release, spawnJob, start, until, waitJob } from "./plant.ts";
 
 const WAKE = fileURLToPath(new URL("../hook/wake.ts", import.meta.url));
 
@@ -172,7 +172,7 @@ test("in Herdr a spawn with no mode flag runs detached under its --timeout; queu
 		spawnSync("sh", ["-c", command.join(" ")], {
 			cwd: p.root,
 			encoding: "utf8",
-			env: { ...p.env, PATH: `${join(LIMEN, "..")}:${p.env.PATH}`, LIMEN_PI: binary },
+			env: { ...p.env, PATH: `${fileURLToPath(new URL("../bin", import.meta.url))}:${p.env.PATH}`, LIMEN_PI: binary },
 		});
 	const viewed = runView("/bin/echo");
 	assert.deepEqual([viewed.status, viewed.stdout], [0, `--view ${session}/fake.jsonl\n`]);
@@ -185,8 +185,7 @@ test("in Herdr a spawn with no mode flag runs detached under its --timeout; queu
 		await writeFile(join(dir, "hosted"), engine === "hosted" ? "1" : "");
 		assert.equal(limen(p, ["open", id], { env }).status, 0);
 		const opened = named("pane", "run").at(-1)?.slice(3) ?? [];
-		const tail = ["tail", "-n", "+1", log];
-		const expected = engine === "pi" ? ["limen", "view", quote(id)] : tail;
+		const expected = engine === "pi" ? ["limen", "view", quote(id)] : ["tail", "-n", "+1", log];
 		assert.deepEqual(opened, expected);
 		spawnSync(join(herdr, "herdr"), ["tab", "close", jobFile(p, id, "herdr/tab")]);
 	}
